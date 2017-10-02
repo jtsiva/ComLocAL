@@ -5,22 +5,10 @@
 class Radio(None):
 	"""
 	'Abstract' class used to provide the basic functionality of the
-	radios to be used by CommLocAL. Reading and writing are found here,
-	of course, as well as setting up static features common with all
-	radios (they ought to be experimentally verified):
+	radios to be used by CommLocAL. Reading and writing are found here
 
 	  frame length
 	  max range
-	  data rate (open to setting multiple speeds?)
-	  pwr consumption (mW per byte? frame?)
-
-	dynamic features to keep in mind:
-	  Distance between sender and receiver
-	  Radio traffic/usage
-	  comm quality (SNR, dropped packets)
-
-
-	Encapsulate settings here as well? Modes, channels, etc.
 
 	Set callback for errors, sent frames, and arriving frames?
 	  <for now> treating like character device driver
@@ -49,21 +37,17 @@ class Radio(None):
 		"""
 		pass
 
-	def getAddress ():
+	def getProperties ():
 		"""
-		Return the address of the radio
+		Return the common properties of the radio:
+			address
+			max payload len
+			max range (per pwr level?)
+
+		as a tuple: (addr, len, range)
 		"""
 		pass
 
-	def cost(length, dest):
-		"""
-		Given the length of a message and the destination, determine a cost
-		(arbitrary units-- call them grumbles) for using this radio to send
-		the message
-
-		Returns an integer
-		"""
-		pass
 
 	def scan():
 		"""
@@ -72,24 +56,18 @@ class Radio(None):
 		"""
 		pass
 
-	def connect (dest):
-		"""
-		Connect with the device dest if not already
- 
-		return status (0 okay, < 0 problem)
-		"""
-		pass
-
-	def tune(options):
-		"""
-		Settings
-		"""
-		pass
-
 	def range():
 		"""
 		Either define as a function of RSSI (determined empirically)
-		or, in the case of UWB, just get the range from TWR.
+		or, in the case of UWB, just get the range from TWR. Return a
+		tuple of (range, error) both in meters.
+		"""
+		pass
+
+	def setPwrMode(mode):
+		"""
+		Set the power mode of the radio--intended to set the radio to
+		a lower power mode
 		"""
 		pass
 
@@ -98,11 +76,7 @@ class Radio(None):
 class WiFi (Radio):
 	"""
 	Facilitates / abstracts all communication over WiFi
-	Need to set port/address that is used for communication
-
-	options include:
-	  TCP | UDP | File stream | Video stream
-	  TX pwr
+	All communication is broadcast UDP
 
 	"""
 	def __init__ ():
@@ -127,8 +101,7 @@ class Bluetooth (Radio):
 	"""
 	Abstracts all communication over Bluetooth / BLE
 
-	options include:
-	  BLE beacon / other BLE functions
+	All communication is broadcast
 	"""
 	def __init__ ():
 		_name = 'BT'
