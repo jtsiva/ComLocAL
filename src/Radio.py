@@ -10,14 +10,10 @@ class Radio(None):
 	  frame length
 	  max range
 
-	Set callback for errors, sent frames, and arriving frames?
-	  <for now> treating like character device driver
-
 	"""
-	def __init__(frameLength, dataRate, maxRange, pwrUsage):
+	def __init__(frameLength, maxRange, pwrUsage):
 		_name = 'NULL'
 		_frameLength = frameLength
-		_dataRate = dataRate
 		_maxRange = maxRange
 		_pwrUsage = pwrUsage
 
