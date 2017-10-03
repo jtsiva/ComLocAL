@@ -18,16 +18,40 @@ class TestPacket(unittest.TestCase):
 		self.assertEqual(self.packet._calcChkSum(), 0)
 	#
 
-	def test_packet_dest_set(self):
+	def test_packet_dest_set_check_valid(self):
 		self.packet = Packet.Packet()
 		self.packet.setDest ('192.168.0.1')
 		self.assertEqual(self.packet.isValid(), False)
 	#
 
-	def test_packet_src_set(self):
+	def test_packet_dest_set_check_value_dec(self):
+		self.packet = Packet.Packet()
+		self.packet.setDest ('192.168.10.1')
+		self.assertEqual(self.packet._dest, [192, 168, 10, 1])
+	#
+
+	def test_packet_dest_set_check_value_hex(self):
+		self.packet = Packet.Packet(addressType=Packet.ADDRESS_TYPE.HEX)
+		self.packet.setDest ('DE:AD:F8:01')
+		self.assertEqual(self.packet._dest, [0xDE, 0xAD, 0xF8, 0x01])
+	#
+
+	def test_packet_src_set_check_valid(self):
 		self.packet = Packet.Packet()
 		self.packet.setSrc ('192.168.0.1')
 		self.assertEqual(self.packet.isValid(), False)
+	#
+
+	def test_packet_src_set_check_value_dec(self):
+		self.packet = Packet.Packet()
+		self.packet.setSrc ('192.168.10.2')
+		self.assertEqual(self.packet._src, [192, 168, 10, 2])
+	#
+
+	def test_packet_src_set_check_value_hex(self):
+		self.packet = Packet.Packet(addressType=Packet.ADDRESS_TYPE.HEX)
+		self.packet.setSrc ('DE:AD:F8:02')
+		self.assertEqual(self.packet._src, [0xDE, 0xAD, 0xF8, 0x02])
 	#
 
 	def test_packet_dest_and_src_set(self):

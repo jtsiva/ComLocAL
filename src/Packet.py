@@ -1,15 +1,19 @@
 #!/usr/bin/python
 
+import re
+
 def enum(**enums):
     return type('Enum', (), enums)
 
-PACKET_TYPE = enum(COMMON=108,LONG=1024)
+PACKET_TYPE = enum(COMMON=116,LONG=1024)
+ADDRESS_TYPE = enum(DEC=1, HEX=2)
 
 
 class Packet:
-	def __init__ (self, packetType = PACKET_TYPE.COMMON, fromBytes = []):
-		self._dest = ''
-		self._src = ''
+	def __init__ (self, packetType = PACKET_TYPE.COMMON, addressType = ADDRESS_TYPE.DEC, fromBytes = []):
+		self._dest = []
+		self._src = []
+		self._addrType = addressType
 		self._ttl = 5 #max hops in network
 		self._data = ''
 		self._type = packetType
@@ -29,16 +33,26 @@ class Packet:
 		return (self._addrSet and self._ttl > 0 and (self._chksum == self._calcChkSum()))
 	#
 
-	def setDest (self, destAddr):
-		self._dest = destAddr
+	def _digitForAddress(self, val):
+		retVal = 0
+		if ADDRESS_TYPE.DEC == self._addrType:
+			retVal = int(val, 10)
+		elif ADDRESS_TYPE.HEX == self._addrType:
+			retVal = int(val, 16)
 
+		return retVal
+
+	def setDest (self, destAddr):
+		self._dest = re.sub('[^0-9a-zA-Z]+', ' ', destAddr).split()
+		self._dest = [self._digitForAddress(val) for val in self._dest]
 		if 0 != len(self._dest) and 0 != len(self._src):
 			self._addrSet = True
 		#
 	#
 
 	def setSrc (self, srcAddr):
-		self._src = srcAddr
+		self._src = re.sub('[^0-9a-zA-Z]+', ' ', srcAddr).split()
+		self._src = [self._digitForAddress(val) for val in self._src]
 		if 0 != len(self._dest) and 0 != len(self._src):
 			self._addrSet = True
 		#
