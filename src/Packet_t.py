@@ -93,6 +93,14 @@ class TestPacket(unittest.TestCase):
 		self.assertEqual(len(r), 5)
 	#
 
+	def test_packet_get_bytes(self):
+		self.packet = Packet.Packet()
+		self.packet.setDest ('192.168.0.1')
+		self.packet.setSrc ('192.168.0.2')
+		self.packet.setData('hello')
+		data = self.packet.getBytes()
+		self.assertEqual(data, bytearray([192, 168, 0, 1, 192, 168, 0, 2, 5, 5, 104, 101, 108, 108, 111, 236]))
+
 
 #
 

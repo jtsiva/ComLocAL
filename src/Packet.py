@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import re
+import array
 
 def enum(**enums):
     return type('Enum', (), enums)
@@ -94,8 +95,8 @@ class Packet:
 		Return bytearray of packet contents.
 		"""
 		return bytearray(self._dest) + bytearray(self._src) + \
-		bytearray(self._ttl) + bytearray(self._data) + \
-		bytearray(self._chksum)
+		bytearray([self._ttl]) + bytearray([len(self._data)]) + bytearray([ord(e) for e in self._data]) + \
+		bytearray([self._chksum])
 	#
 
 
