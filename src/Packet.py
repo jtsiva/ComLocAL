@@ -22,7 +22,7 @@ class Packet:
 		self._addrSet = False
 
 		if 0 != len(fromBytes):
-			parseFromBytes(fromBytes)
+			self.parseFromBytes(fromBytes)
 		#
 	#
 
@@ -87,7 +87,43 @@ class Packet:
 	#
 
 	def parseFromBytes(self, dataBytes):
-		pass
+		"""
+		Initialize the packet object from a list of bytes
+
+		Return True if parsed correctly, False otherwise
+
+		consider using factory method to handle different packet structures
+		"""
+		if 11 > len(dataBytes):
+			return False
+
+		self._dest = []
+		self._src = []
+		self._data = []
+		dataLen = 0
+		for i, b in enumerate(dataBytes):
+			if 0 <= i and i < 4:
+				self._dest.append(b)
+			elif 4 <= i and i < 8:
+				self._src.append(b)
+			elif 8 == i:
+				self._ttl = b
+			elif 9 == i:
+				dataLen = b
+
+			if i - 9 <= dataLen and i > 9:
+				self._data.append(b)
+			#
+
+			if i == 9 + dataLen + 1:
+				self._chksum = b
+			#
+		#
+
+		self._data = "".join(chr(e) for e in self._data)
+		self._addrSet = True
+
+		return self.isValid()
 	#
 
 	def getBytes(self):

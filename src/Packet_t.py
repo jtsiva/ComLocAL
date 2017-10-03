@@ -100,7 +100,47 @@ class TestPacket(unittest.TestCase):
 		self.packet.setData('hello')
 		data = self.packet.getBytes()
 		self.assertEqual(data, bytearray([192, 168, 0, 1, 192, 168, 0, 2, 5, 5, 104, 101, 108, 108, 111, 236]))
+	#
 
+	def test_packet_parse_from_bytes_check_valid(self):
+		self.packet = Packet.Packet()
+		self.assertEqual(self.packet.parseFromBytes([192, 168, 0, 1, 192, 168, 0, 2, 5, 5, 104, 101, 108, 108, 111, 236])
+
+, True)
+	#
+
+	def test_packet_parse_from_bytes_checksum_wrong(self):
+		self.packet = Packet.Packet()
+		self.assertEqual(self.packet.parseFromBytes([192, 168, 0, 1, 192, 168, 0, 2, 5, 5, 104, 101, 108, 108, 111, 235])
+
+, False)
+	#
+
+	def test_packet_parse_from_bytes_too_short(self):
+		self.packet = Packet.Packet()
+		self.assertEqual(self.packet.parseFromBytes([192, 168, 0, 1, 192, 168, 0, 2, 5, 236])
+
+, False)
+	#
+
+	def test_packet_from_bytes_check_dest(self):
+		self.packet = Packet.Packet(fromBytes = [192, 168, 0, 1, 192, 168, 0, 2, 5, 5, 104, 101, 108, 108, 111, 236])
+		self.assertEqual(self.packet._dest, [192, 168, 0, 1])
+	#
+
+	def test_packet_from_bytes_check_src(self):
+		self.packet = Packet.Packet(fromBytes = [192, 168, 0, 1, 192, 168, 0, 2, 5, 5, 104, 101, 108, 108, 111, 236])
+		self.assertEqual(self.packet._src, [192, 168, 0, 2])
+	#
+
+	def test_packet_from_bytes_check_ttl(self):
+		self.packet = Packet.Packet(fromBytes = [192, 168, 0, 1, 192, 168, 0, 2, 4, 5, 104, 101, 108, 108, 111, 236])
+		self.assertEqual(self.packet._ttl, 4)
+	#
+
+	def test_packet_from_bytes_check_data(self):
+		self.packet = Packet.Packet(fromBytes = [192, 168, 0, 1, 192, 168, 0, 2, 5, 5, 104, 101, 108, 108, 111, 236])
+		self.assertEqual(self.packet._data, 'hello')
 
 #
 
