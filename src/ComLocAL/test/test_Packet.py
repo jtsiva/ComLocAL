@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 import unittest
-import Packet
+from util import Packet
 
 class TestPacket(unittest.TestCase):
 

@@ -2,7 +2,7 @@
 
 #from io import BytesIO
 
-class Radio(None):
+class Radio:
 	"""
 	'Abstract' class used to provide the basic functionality of the
 	radios to be used by CommLocAL. Reading and writing are found here

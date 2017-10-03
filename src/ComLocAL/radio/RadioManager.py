@@ -1,15 +1,15 @@
 #!/usr/bin/python
 
-import Radio
+from radio import Radio
 import threading
 import Queue
-import Packet
+from util import Packet
 
-class RadioManager(None):
-	def __init__(self, Radio rad):
+class RadioManager:
+	def __init__(self, myrad):
 		#In Q
 		#out Q
-		_radio = rad
+		_radio = myRad
 		# start _proc threads
 		pass
 
