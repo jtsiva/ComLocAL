@@ -6,14 +6,14 @@ import Queue
 import Packet
 
 class RadioManager(None):
-	def __init__(Radio rad):
+	def __init__(self, Radio rad):
 		#In Q
 		#out Q
 		_radio = rad
 		# start _proc threads
 		pass
 
-	def _procRead():
+	def _procRead(self):
 		"""
 		Thread for processing read queue.
 		Parse radio input and turn into packet objects which
@@ -21,7 +21,7 @@ class RadioManager(None):
 		"""
 		pass
 
-	def _procWrite():
+	def _procWrite(self):
 		"""
 		Thread for processing write queue. 
 		Pulls packet off and turns into byte stream which is
@@ -29,25 +29,25 @@ class RadioManager(None):
 		"""
 		pass
 
-	def read(n):
+	def read(self, n):
 		"""
 		Read n packets from the read Q and return as a list
 		"""
 		pass
 
-	def write(packets):
+	def write(self, packets):
 		"""
 		Add packet(s) to write Q.
 		"""
 		pass
 
-	def scan():
+	def scan(self):
 		"""
 		pass-through
 		"""
 		pass
 
-	def range():
+	def range(self):
 		"""
 		pass-through
 		"""

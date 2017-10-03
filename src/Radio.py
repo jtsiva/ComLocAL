@@ -11,13 +11,13 @@ class Radio(None):
 	  max range
 
 	"""
-	def __init__(frameLength, maxRange, pwrUsage):
-		_name = 'NULL'
-		_frameLength = frameLength
-		_maxRange = maxRange
-		_pwrUsage = pwrUsage
+	def __init__(self, frameLength, maxRange, pwrUsage):
+		self._name = 'NULL'
+		self._frameLength = frameLength
+		self._maxRange = maxRange
+		self._pwrUsage = pwrUsage
 
-	def read(n):
+	def read(self, n):
 		"""
 		Read n bytes
 
@@ -25,7 +25,7 @@ class Radio(None):
 		"""
 		pass
 
-	def write(data):
+	def write(self, data):
 		"""
 		Write data
 
@@ -33,7 +33,7 @@ class Radio(None):
 		"""
 		pass
 
-	def getProperties ():
+	def getProperties (self):
 		"""
 		Return the common properties of the radio:
 			address
@@ -45,14 +45,14 @@ class Radio(None):
 		pass
 
 
-	def scan():
+	def scan(self):
 		"""
 		Send some sort of HELLO message to other radios listening for it.
 		Think of this as the discovery protocol for a given radio.
 		"""
 		pass
 
-	def range():
+	def range(self):
 		"""
 		Either define as a function of RSSI (determined empirically)
 		or, in the case of UWB, just get the range from TWR. Return a
@@ -60,7 +60,7 @@ class Radio(None):
 		"""
 		pass
 
-	def setPwrMode(mode):
+	def setPwrMode(self, mode):
 		"""
 		Set the power mode of the radio--intended to set the radio to
 		a lower power mode
@@ -75,8 +75,8 @@ class WiFi (Radio):
 	All communication is broadcast UDP
 
 	"""
-	def __init__ ():
-		_name = 'WiFi'
+	def __init__ (self):
+		self._name = 'WiFi'
 		pass
 #
 
@@ -88,8 +88,8 @@ class ZigBee (Radio):
 	options include:
 	  TX pwr
 	"""
-	def __init__ ():
-		_name = 'ZB'
+	def __init__ (self):
+		self._name = 'ZB'
 		pass
 #
 
@@ -99,8 +99,8 @@ class Bluetooth (Radio):
 
 	All communication is broadcast
 	"""
-	def __init__ ():
-		_name = 'BT'
+	def __init__ (self):
+		self._name = 'BT'
 		pass
 #
 
@@ -111,12 +111,12 @@ class UWB (Radio):
 	options include:
 	  Ranging frequency | range after message
 	"""
-	def __init__():
-		_name = 'UWB'
+	def __init__(self):
+		self._name = 'UWB'
 		pass
 #
 
-def create(name, options = []):
+def create(name):
 	if 'WiFi' == name:
 		myObj = Wifi()
 	elif 'ZigBee' == name:
@@ -128,5 +128,4 @@ def create(name, options = []):
 	else:
 		myObj = Radio()
 
-	myObj.tune(options)
 	return myObj
