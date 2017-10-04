@@ -2,16 +2,18 @@
 
 import unittest
 from radio import RadioManager
+from radio import Dummy
 
 class TestRadioManager(unittest.TestCase):
 
 	def setUp(self):
-		pass
+		self.myRad = Dummy.Dummy()
 	#
 
 	def test_init_manager(self):
-		#Need dummy radio to test
+		self.radManager = RadioManager.RadioManager(self.myRad)
 		self.assertEqual(False, True)
+	#
 
 #
 

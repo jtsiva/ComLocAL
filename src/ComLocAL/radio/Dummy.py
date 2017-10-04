@@ -1,23 +1,28 @@
 #!/usr/bin/python
 
-from radio import radio
+from radio import Radio
+import sys
+import random
+import string
 
-class WiFi (Radio):
+class Dummy(Radio.Radio):
 	"""
-	Facilitates / abstracts all communication over WiFi
-	All communication is broadcast UDP
+	Class used for testing modules that expect a radio
+	interface. Provides consistent, known behavior that
+	doesn't rely on actual network connections.
+	"""
 
-	"""
-	def __init__ (self):
-		self._name = 'WiFi'
+	def __init__(self):
+		self._name = 'dummy'
+		super(Dummy,self).__init__(127, 50, 1)
 
 	def read(self, n):
 		"""
 		Read n bytes
 
-		return n bytes or whatever is available to read (which is smaller)
+		return n random bytes in a list
 		"""
-		pass
+		return [random.choice(string.ascii_uppercase + string.digits) for _ in range(n)]
 
 	def write(self, data):
 		"""
@@ -25,18 +30,18 @@ class WiFi (Radio):
 
 		return number of bytes written
 		"""
-		pass
+		return len(data)
 
 	def getProperties (self):
 		"""
 		Return the common properties of the radio:
 			address
-			max payload len
-			max range (per pwr level?)
+			max packet length in bytes
+			max range (per pwr level?) in meters
 
 		as a tuple: (addr, len, range)
 		"""
-		pass
+		return ('255.255.255.' + str(random.randint(0,255)), self._frameLength, self._maxRange)
 
 
 	def scan(self):

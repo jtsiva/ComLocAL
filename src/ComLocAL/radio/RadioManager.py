@@ -9,7 +9,7 @@ class RadioManager:
 	def __init__(self, myrad):
 		#In Q
 		#out Q
-		_radio = myRad
+		self._radio = myRad
 		# start _proc threads
 		pass
 
@@ -31,7 +31,8 @@ class RadioManager:
 
 	def read(self, n):
 		"""
-		Read n packets from the read Q and return as a list
+		Read n packets (or whatever is available) from the read Q and return as a list
+		can return 0 packets if input doesn't contain a valid packet
 		"""
 		pass
 
@@ -45,13 +46,13 @@ class RadioManager:
 		"""
 		pass-through
 		"""
-		pass
+		return self._radio.scan()
 
 	def range(self):
 		"""
 		pass-through
 		"""
-		pass
+		return self._radio.range()
 
 
 #
