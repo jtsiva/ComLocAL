@@ -15,20 +15,64 @@ class Dummy(Radio.Radio):
 	def __init__(self):
 		self._name = 'dummy'
 		super(Dummy,self).__init__(127, 50, 1)
+		self._bytesToRead = []
+		self._generatePacketBytes()
+		self._readBytesPos = 0
+
+	def _generatePacketBytes(self):
+		"""
+		Generates a packet of random length between the min (11 bytes) and
+		the max packet size containing random addresses and data. Used by read
+		"""
+		header = [random.randint(0,255) for _ in range(8)] #gen random int addresses (8 bytes)
+		header.append(random.randint(1,5)) #gen random ttl (1 byte)
+		dataLen = random.randint(0,116)
+		data = [ord(random.choice(string.ascii_uppercase + string.digits)) for _ in range(dataLen)]
+		tmpSum = 0
+		for b in data:
+			tmpSum += b
+		#
+
+		self._bytesToRead += header
+		self._bytesToRead.append(dataLen)
+		self._bytesToRead += data
+		self._bytesToRead.append(((1 << 8) - tmpSum) % 256)
+	#
 
 	def read(self, n):
 		"""
 		Read n bytes
 
-		return n random bytes in a list
+		return n bytes of a randomly generated packet
+		if n is greater than the remaining bytes in the packet then only
+		the remaining bytes are returned and a new packet is generated
 		"""
-		return [random.choice(string.ascii_uppercase + string.digits) for _ in range(n)]
+		gen = False
+		if self._readBytesPos + n >= len(self._bytesToRead):
+			end = len(self._bytesToRead) - 1
+			gen = True
+		else:
+			end = self._readBytesPos + n
+
+		retBytes = self._bytesToRead[self._readBytesPos:end]
+
+		if self._readBytesPos == end:
+			retBytes = [retBytes]
+		if gen:
+			self._generatePacketBytes()
+			self._readBytesPos = 0
+		else:
+			self._readBytesPos = end + 1
+		#
+
+
+		return retBytes
 
 	def write(self, data):
 		"""
 		Write data
 
-		return number of bytes written
+		return number of bytes "written"
 		"""
 		return len(data)
 

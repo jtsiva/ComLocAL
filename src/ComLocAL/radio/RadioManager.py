@@ -11,17 +11,24 @@ class RadioManager:
 		self._outQ = Queue()
 		self._radio = myRad
 		
+		self._threadExcept = Queue()
 		self._threadsRunning = True
 		self._readThread = threading.Thread(target=self._procRead)
-		self._writeThread = threading.Thread(target=self._procWrite)
+		#self._writeThread = threading.Thread(target=self._procWrite)
 		
 		self._readThread.start()
-		self._writeThread.start()
+		#self._writeThread.start()
 	#
 
 	def __del__(self):
+		self._threadsRunning = False
 		self._readThread.join()
-		self._writeThread.join()
+		#self._writeThread.join()
+
+	def stop(self):
+		self._threadsRunning = False
+		self._readThread.join()
+		#self._writeThread.join()
 
 	def _procRead(self):
 		"""
@@ -31,11 +38,11 @@ class RadioManager:
 		"""
 		DATA_LEN_BYTE = 9
 
-		pos = 0;
+		pos = 0
 		dataLen = 0
 		inBytes = []
 		while self._threadsRunning:
-			b = self._radio.read(1)
+			b = self._radio.read(1)[0]
 			inBytes.append(b)
 
 			if pos == DATA_LEN_BYTE:
@@ -43,7 +50,7 @@ class RadioManager:
 			#
 			pos += 1
 
-			if pos == DATA_LEN_BYTE + dataLen + 1:
+			if pos == (DATA_LEN_BYTE + dataLen + 1):
 				packet = Packet.Packet(fromBytes=inBytes)
 				self._inQ.put(packet)
 				pos = 0
@@ -51,6 +58,7 @@ class RadioManager:
 				inBytes = []
 			#
 		#
+	#
 
 	def _procWrite(self):
 		"""
@@ -59,9 +67,10 @@ class RadioManager:
 		written to radio
 		"""
 		while self._threadsRunning:
-			packet = self._outQ.get(True)
+			packet = self._outQ.get()
 			self._radio.write(packet.getBytes())
 		#
+	#
 
 	def read(self, n):
 		"""

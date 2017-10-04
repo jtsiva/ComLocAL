@@ -2,6 +2,7 @@
 
 import unittest
 from radio import Dummy
+from util import Packet
 
 class TestDummyRadio(unittest.TestCase):
 
@@ -31,6 +32,16 @@ class TestDummyRadio(unittest.TestCase):
 		props = self.myRad.getProperties()
 		self.assertEquals(props[2], 50)
 	#
+
+	def test_dummy_gen_100_valid_packets(self):
+		for x in range(100):
+			self.myRad._generatePacketBytes()
+			print x
+			newPacket = Packet.Packet()
+			newPacket.parseFromBytes(self.myRad._bytesToRead)
+			#print newPacket._calcChkSum()
+			self.assertEquals(newPacket.isValid(), True)
+		#
 
 if __name__ == '__main__':
 	unittest.main()

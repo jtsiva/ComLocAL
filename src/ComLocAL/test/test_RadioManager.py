@@ -11,6 +11,11 @@ class TestRadioManager(unittest.TestCase):
 		self.radManager = RadioManager.RadioManager(self.myRad)
 	#
 
+	def tearDown(self):
+		self.radManager.stop()
+
+	#TODO: need to adjust Dummy to limit how often new data is generated
+	#		or else Radio Manager read Q will become extraordinarily large
 	def test_read_0(self):
 		d = self.radManager.read(0)
 		self.assertEquals(len(d), 0)
