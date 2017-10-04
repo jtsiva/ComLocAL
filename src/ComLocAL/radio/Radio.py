@@ -1,7 +1,5 @@
 #!/usr/bin/python
 
-#from io import BytesIO
-
 class Radio:
 	"""
 	'Abstract' class used to provide the basic functionality of the
@@ -68,64 +66,3 @@ class Radio:
 		pass
 
 #
-
-class WiFi (Radio):
-	"""
-	Facilitates / abstracts all communication over WiFi
-	All communication is broadcast UDP
-
-	"""
-	def __init__ (self):
-		self._name = 'WiFi'
-		pass
-#
-
-class ZigBee (Radio):
-	"""
-	Abstracts all communication over ZigBee
-	Scan could be useful for building up the network structure
-
-	options include:
-	  TX pwr
-	"""
-	def __init__ (self):
-		self._name = 'ZB'
-		pass
-#
-
-class Bluetooth (Radio):
-	"""
-	Abstracts all communication over Bluetooth / BLE
-
-	All communication is broadcast
-	"""
-	def __init__ (self):
-		self._name = 'BT'
-		pass
-#
-
-class UWB (Radio):
-	"""
-	Abstracts all communication over UWB
-
-	options include:
-	  Ranging frequency | range after message
-	"""
-	def __init__(self):
-		self._name = 'UWB'
-		pass
-#
-
-def create(name):
-	if 'WiFi' == name:
-		myObj = Wifi()
-	elif 'ZigBee' == name:
-		myObj = ZigBee()
-	elif 'Bluetooth' == name:
-		myObj = Bluetooth()
-	elif 'UWB' == name:
-		myObj = UWB ()
-	else:
-		myObj = Radio()
-
-	return myObj
