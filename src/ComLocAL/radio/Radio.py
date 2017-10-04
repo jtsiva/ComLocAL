@@ -17,7 +17,7 @@ class Radio(object):
 
 	def read(self, n):
 		"""
-		Read n bytes
+		Read n bytes as bytearray
 
 		return n bytes or whatever is available to read (which is smaller)
 		"""
@@ -25,7 +25,7 @@ class Radio(object):
 
 	def write(self, data):
 		"""
-		Write data
+		Write data (bytearray)
 
 		return number of bytes written
 		"""
