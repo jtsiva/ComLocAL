@@ -23,11 +23,6 @@ class TestRadioManager(unittest.TestCase):
 	def test_radio_manager_read_1000_packets(self):
 		for x in range(1000):
 			p = self.radManager.read(1)[0]
-			if not p.isValid():
-				print p._ttl
-				print p._chksum
-				print p._calcChkSum()
-			#
 			self.assertEquals(p.isValid(), True)
 		#
 	#
