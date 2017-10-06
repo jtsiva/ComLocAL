@@ -24,10 +24,12 @@ class Dummy(Radio.Radio):
 		Generates a packet of random length between the min (11 bytes) and
 		the max packet size containing random addresses and data. Used by read
 		"""
+		self._bytesToRead = []
 		header = [random.randint(0,255) for _ in range(8)] #gen random int addresses (8 bytes)
 		header.append(random.randint(1,5)) #gen random ttl (1 byte)
 		dataLen = random.randint(0,116)
 		data = [ord(random.choice(string.ascii_uppercase + string.digits)) for _ in range(dataLen)]
+
 		tmpSum = 0
 		for b in data:
 			tmpSum += b
@@ -49,7 +51,7 @@ class Dummy(Radio.Radio):
 		"""
 		gen = False
 		if self._readBytesPos + n >= len(self._bytesToRead):
-			end = len(self._bytesToRead) - 1
+			end = len(self._bytesToRead)
 			gen = True
 		else:
 			end = self._readBytesPos + n
@@ -58,13 +60,13 @@ class Dummy(Radio.Radio):
 
 		if self._readBytesPos == end:
 			retBytes = [retBytes]
+
 		if gen:
 			self._generatePacketBytes()
 			self._readBytesPos = 0
 		else:
-			self._readBytesPos = end + 1
+			self._readBytesPos = end
 		#
-
 
 		return retBytes
 

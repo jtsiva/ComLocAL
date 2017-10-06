@@ -33,15 +33,24 @@ class TestDummyRadio(unittest.TestCase):
 		self.assertEquals(props[2], 50)
 	#
 
-	def test_dummy_gen_100_valid_packets(self):
-		for x in range(100):
+	def test_dummy_gen_1000_valid_packets(self):
+		for x in range(1000):
 			self.myRad._generatePacketBytes()
-			print x
 			newPacket = Packet.Packet()
 			newPacket.parseFromBytes(self.myRad._bytesToRead)
 			#print newPacket._calcChkSum()
 			self.assertEquals(newPacket.isValid(), True)
 		#
+	#
+
+	def test_dummy_continuous_read_10000_bytes(self):
+		for x in range(10000):
+			#print x
+			b = self.myRad.read(1)
+			#print b
+			self.assertEquals(isinstance(b, list) and len(b) > 0, True)
+
+
 
 if __name__ == '__main__':
 	unittest.main()

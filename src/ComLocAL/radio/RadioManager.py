@@ -43,6 +43,7 @@ class RadioManager:
 		inBytes = []
 		while self._threadsRunning:
 			b = self._radio.read(1)[0]
+
 			inBytes.append(b)
 
 			if pos == DATA_LEN_BYTE:
