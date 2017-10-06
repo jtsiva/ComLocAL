@@ -35,7 +35,6 @@ class TestDummyRadio(unittest.TestCase):
 
 	def test_dummy_gen_1000_valid_packets(self):
 		for x in range(1000):
-			self.myRad._generatePacketBytes()
 			newPacket = Packet.Packet()
 			newPacket.parseFromBytes(self.myRad._bytesToRead)
 			#print newPacket._calcChkSum()

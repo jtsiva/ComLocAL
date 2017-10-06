@@ -16,10 +16,21 @@ class TestRadioManager(unittest.TestCase):
 
 	#TODO: need to adjust Dummy to limit how often new data is generated
 	#		or else Radio Manager read Q will become extraordinarily large
-	def test_read_0(self):
+	def test_radio_manager_read_0(self):
 		d = self.radManager.read(0)
 		self.assertEquals(len(d), 0)
 
+	def test_radio_manager_read_1000_packets(self):
+		for x in range(1000):
+			p = self.radManager.read(1)[0]
+			if not p.isValid():
+				print p._ttl
+				print p._chksum
+				print p._calcChkSum()
+			#
+			self.assertEquals(p.isValid(), True)
+		#
+	#
 
 #
 

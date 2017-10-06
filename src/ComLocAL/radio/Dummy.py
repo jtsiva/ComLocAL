@@ -49,24 +49,27 @@ class Dummy(Radio.Radio):
 		if n is greater than the remaining bytes in the packet then only
 		the remaining bytes are returned and a new packet is generated
 		"""
-		gen = False
-		if self._readBytesPos + n >= len(self._bytesToRead):
-			end = len(self._bytesToRead)
-			gen = True
+		if 0 != n:
+			gen = False
+			if self._readBytesPos + n >= len(self._bytesToRead):
+				end = len(self._bytesToRead)
+				gen = True
+			else:
+				end = self._readBytesPos + n
+
+			retBytes = self._bytesToRead[self._readBytesPos:end]
+
+			if self._readBytesPos == end:
+				retBytes = [retBytes]
+
+			if gen:
+				self._generatePacketBytes()
+				self._readBytesPos = 0
+			else:
+				self._readBytesPos = end
+			#
 		else:
-			end = self._readBytesPos + n
-
-		retBytes = self._bytesToRead[self._readBytesPos:end]
-
-		if self._readBytesPos == end:
-			retBytes = [retBytes]
-
-		if gen:
-			self._generatePacketBytes()
-			self._readBytesPos = 0
-		else:
-			self._readBytesPos = end
-		#
+			retBytes = []
 
 		return retBytes
 
