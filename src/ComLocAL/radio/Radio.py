@@ -1,4 +1,4 @@
-#!/usr/bin/python
+from util import Properties
 
 class Radio(object):
 	"""
@@ -9,11 +9,9 @@ class Radio(object):
 	  max range
 
 	"""
-	def __init__(self, frameLength, maxRange, pwrUsage):
+	def __init__(self, props):
 		self._name = 'NULL'
-		self._frameLength = frameLength
-		self._maxRange = maxRange
-		self._pwrUsage = pwrUsage
+		self._props = props
 
 	def read(self, n):
 		"""
@@ -36,11 +34,11 @@ class Radio(object):
 		Return the common properties of the radio:
 			address
 			max payload len
-			max range (per pwr level?)
+			etc.
 
-		as a tuple: (addr, len, range)
+		as an object
 		"""
-		pass
+		return self._props
 
 
 	def scan(self):

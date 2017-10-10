@@ -20,17 +20,17 @@ class TestDummyRadio(unittest.TestCase):
 
 	def test_dummmy_radio_properties_address(self):
 		props = self.myRad.getProperties()
-		self.assertEquals(props[0][:12], '255.255.255.')
+		self.assertEquals(props.addr[:12], '255.255.255.')
 	#
 
 	def test_dummmy_radio_properties_packet_len(self):
 		props = self.myRad.getProperties()
-		self.assertEquals(props[1], 127)
+		self.assertEquals(props.maxFrameLength, 127)
 	#
 
-	def test_dummmy_radio_properties_range(self):
+	def test_dummmy_radio_properties_cost(self):
 		props = self.myRad.getProperties()
-		self.assertEquals(props[2], 50)
+		self.assertEquals(props.costPerByte, 1)
 	#
 
 	def test_dummy_gen_1000_valid_packets(self):

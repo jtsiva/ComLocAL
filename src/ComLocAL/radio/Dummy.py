@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 from radio import Radio
+from util import Properties
 import sys
 import random
 import string
@@ -14,10 +15,21 @@ class Dummy(Radio.Radio):
 
 	def __init__(self):
 		self._name = 'dummy'
-		super(Dummy,self).__init__(127, 50, 1)
+		super(Dummy,self).__init__(self._setupProperties())
 		self._bytesToRead = []
 		self._generatePacketBytes()
 		self._readBytesPos = 0
+
+	def _setupProperties(self):
+		"""
+		Set up the radio properties we might need
+		"""
+		props = Properties.Properties()
+		props.addr = '255.255.255.' + str(random.randint(0,255))
+		props.maxFrameLength = 127
+		props.costPerByte = 1
+
+		return props
 
 	def _generatePacketBytes(self):
 		"""
@@ -80,18 +92,6 @@ class Dummy(Radio.Radio):
 		return number of bytes "written"
 		"""
 		return len(data)
-
-	def getProperties (self):
-		"""
-		Return the common properties of the radio:
-			address
-			max packet length in bytes
-			max range (per pwr level?) in meters
-
-		as a tuple: (addr, len, range)
-		"""
-		return ('255.255.255.' + str(random.randint(0,255)), self._frameLength, self._maxRange)
-
 
 	def scan(self):
 		"""
