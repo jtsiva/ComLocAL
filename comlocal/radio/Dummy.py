@@ -26,7 +26,7 @@ class Dummy(Radio.Radio):
 		"""
 		props = Properties.Properties()
 		props.addr = '255.255.255.' + str(random.randint(0,255))
-		props.maxFrameLength = 127
+		props.maxPacketLength = 127
 		props.costPerByte = 1
 
 		return props

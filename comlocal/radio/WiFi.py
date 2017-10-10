@@ -48,7 +48,7 @@ class WiFi (Radio.Radio):
 			#my laptop has a different form
 			props.addr = self._get_ip_address('wlp1s0')
 
-		props.maxFrameLength = 512
+		props.maxPacketLength = 512
 		props.costPerByte = 1
 
 		return props

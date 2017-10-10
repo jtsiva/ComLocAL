@@ -25,7 +25,7 @@ class TestDummyRadio(unittest.TestCase):
 
 	def test_dummmy_radio_properties_packet_len(self):
 		props = self.myRad.getProperties()
-		self.assertEquals(props.maxFrameLength, 127)
+		self.assertEquals(props.maxPacketLength, 127)
 	#
 
 	def test_dummmy_radio_properties_cost(self):
