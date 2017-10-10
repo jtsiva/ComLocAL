@@ -1,13 +1,57 @@
-#!/usr/bin/python
 
-class WiFi (Radio):
+from util import Properties
+from radio import Radio
+import socket
+import struct
+import fcntl
+import sys
+
+class WiFi (Radio.Radio):
 	"""
 	Facilitates / abstracts all communication over WiFi
-	All communication is broadcast UDP
+	All communication is multicast UDP. The address within the packet
+	is used to determine intended destination
+
+	multicast addr: 224.0.0.0 - 239.255.255.255
+	broadcast addr: 255.255.255.255
+
+	multicast for infrastructure
+	'broadcast' for ad hoc (each device addr based on unique UAV ID)
+
+	multicast based on:
+	https://pymotw.com/2/socket/multicast.html
 
 	"""
 	def __init__ (self):
 		self._name = 'WiFi'
+		super(WiFi, self).__init__(self._setupProperties())
+
+		self._groupAddr = '224.0.2.47'
+		self._port = 10000
+		self._multicastGroup = (self._groupAddr, self._port)
+		self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+		self._sock.settimeout(0.2)
+		ttl = struct.pack('b', 1)
+		self._sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
+
+	def __del__(self):
+		self._sock.close()
+
+	def _setupProperties(self):
+		"""
+		Set up the radio properties we might need
+		"""
+		props = Properties.Properties()
+		try:
+			props.addr = self._get_ip_address('wlan0')
+		except IOError:
+			#my laptop has a different form
+			props.addr = self._get_ip_address('wlp1s0')
+
+		props.maxFrameLength = 512
+		props.costPerByte = 1
+
+		return props
 
 	def read(self, n):
 		"""
@@ -15,27 +59,34 @@ class WiFi (Radio):
 
 		return n bytes or whatever is available to read (which is smaller)
 		"""
-		pass
+		try:
+			data, server = self._sock.recvfrom(n)
+		except socket.timeout:
+			pass
+
+		return data
 
 	def write(self, data):
 		"""
-		Write data
+		Write data bytes
 
 		return number of bytes written
 		"""
-		pass
+		sent = self._sock.sendto(data, self._multicastGroup)
 
-	def getProperties (self):
+		return sent
+
+	def _get_ip_address(self, ifname):
 		"""
-		Return the common properties of the radio:
-			address
-			max payload len
-			max range (per pwr level?)
-
-		as a tuple: (addr, len, range)
+			Return ip address of interface:
+			https://raspberrypi.stackexchange.com/questions/6714/how-to-get-the-raspberry-pis-ip-address-for-ssh
 		"""
-		pass
-
+		s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+		return socket.inet_ntoa(fcntl.ioctl(
+			s.fileno(),
+			0x8915,  # SIOCGIFADDR
+			struct.pack('256s', ifname[:15])
+		)[20:24])
 
 	def scan(self):
 		"""
