@@ -8,7 +8,7 @@ class Properties(object):
 
 	def __init__(self):
 		self.addr = ''
-		self.maxFrameLength = 0
+		self.maxPacketLength = 0
 		self.costPerByte = 0
 
 #
