@@ -21,6 +21,11 @@ class WiFi (Radio.Radio):
 	multicast based on:
 	https://pymotw.com/2/socket/multicast.html
 
+	UPDATE (10-10-17): all ad-hoc mode communication
+		need to scan for other devices in range
+		broadcast by iterating over 1-hop list
+		maintain connection table
+
 	"""
 	def __init__ (self):
 		self._name = 'WiFi'
@@ -62,7 +67,7 @@ class WiFi (Radio.Radio):
 		try:
 			data, server = self._sock.recvfrom(n)
 		except socket.timeout:
-			pass
+			data = []
 
 		return data
 
