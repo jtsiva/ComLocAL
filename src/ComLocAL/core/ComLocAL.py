@@ -1,15 +1,21 @@
 #!/usr/bin/python
 
-import Radio
-#import Localization
+from core import RadioMultiplexer
+from util import CommandPacket
 
-class ComLoc (None):
-	def __init__(radioPayload = {}, gps, imu):
-		for radio, options in radioPayload:
-			#initialize and do things!
-			pass
+class ComLocAL (object):
+	"""
+	Interface to application layer. 
+	"""
+	def __init__(self):
+		self._radMuxer = RadioMultiplexer.RadioMultiplexer()
 
-		_addrLookup = {}
-		_costMatrix = []
+	def receive(self, n):
+		pass
 
+	def send(self, packets)
+		pass
+
+	def getNeighbors(self):
+		pass
 #
