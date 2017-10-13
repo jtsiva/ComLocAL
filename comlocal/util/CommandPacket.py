@@ -1,4 +1,22 @@
+"""
+Notes on addressing:
+using an address means using a UAV_ID which takes the form of:
+	[organizational ID]:[App ID]:[Serial #]
+	[4 bytes]:[2 bytes]:[2 bytes]
 
+	ADDRESS ALL: 0:0:0 (useful for BSMs)
+
+geo-addressing refers to indicating either a range of interest
+for the packet or a location, and it look like:
+	[start radius]:[end radius]
+	or
+	[x coor/longitude]:[y coor/latitude]:[radius from point]
+
+	??? SHOULD WE USE RELATIVE LOCATIONS ???
+
+	[2 bytes]:[2 bytes]:[2 bytes]
+	all of these are integers
+"""
 
 class CommmandPacket(object):
 	"""
@@ -17,4 +35,5 @@ class CommmandPacket(object):
 		self._type = 0
 		self._addr = ''
 		self._data = []
+	#
 #
