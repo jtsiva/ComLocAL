@@ -1,10 +1,9 @@
 #!/usr/bin/python
 
-from radio import Radio
 import threading
 from Queue import Empty
 from Queue import Queue
-from util import Packet
+from comlocal.util import Packet
 
 class RadioManager:
 	def __init__(self, myRad):

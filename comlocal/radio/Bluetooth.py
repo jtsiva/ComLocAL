@@ -1,6 +1,5 @@
 #!/usr/bin/python
 
-from radio import radio
 
 class Bluetooth (Radio):
 	"""

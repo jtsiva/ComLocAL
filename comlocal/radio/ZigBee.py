@@ -1,7 +1,5 @@
 #!/usr/bin/python
 
-from radio import radio
-
 class ZigBee (Radio):
 	"""
 	Abstracts all communication over ZigBee

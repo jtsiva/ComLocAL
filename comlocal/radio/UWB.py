@@ -1,7 +1,5 @@
 #!/usr/bin/python
 
-from radio import Radio
-
 class UWB (Radio):
 	"""
 	Abstracts all communication over UWB
