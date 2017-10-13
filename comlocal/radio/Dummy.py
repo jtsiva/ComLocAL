@@ -1,9 +1,9 @@
 #!/usr/bin/python
 
-from radio import Radio
 import sys
 import random
 import string
+import Radio
 
 class Dummy(Radio.Radio):
 	"""
