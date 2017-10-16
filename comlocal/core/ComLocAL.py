@@ -26,6 +26,8 @@ class ComLocAL (object):
 	def getNeighbors(self):
 		"""
 		Return a list of IDs of the neighbors. Can be empty
+
+		Implemented as command or function???
 		"""
 		neighbors = []
 		

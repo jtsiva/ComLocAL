@@ -1,10 +1,11 @@
 #!/usr/bin/python
 
 import unittest
+from core import ComLocAL
 
 class TestComLocAL(unittest.TestCase):
 	def setUp(self):
-		pass
+		self.myComlocal = ComLocAL.ComLocAL()
 
 	@unittest.skip("ComLocAL not implemented")
 	def test_comlocal_init(self):
