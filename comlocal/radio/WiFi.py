@@ -23,8 +23,8 @@ class WiFi (Radio.Radio):
 
 	UPDATE (10-10-17): all ad-hoc mode communication
 		need to scan for other devices in range
-		broadcast by iterating over 1-hop list
-		maintain connection table
+		can both unicast and broadcast since there is no need to
+		broadcast if the destination is a 1-hop neighbor
 
 	"""
 	def __init__ (self):
@@ -32,13 +32,18 @@ class WiFi (Radio.Radio):
 		super(WiFi, self).__init__(self._setupProperties())
 
 		self._port = 10247
-		self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-		self._sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-		self._sock.settimeout(.05)
+		self._rSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+		self._wSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+		self._rSock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+		self._wSock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+		self._wSock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+		self._rSock.settimeout(.05)
+		self._rSock.bind(('0.0.0.0', self._port))
 	#
 
 	def __del__(self):
-		self._sock.close()
+		self._rSock.close()
+		self._wSock.close()
 
 	def _setupProperties(self):
 		"""
@@ -63,7 +68,7 @@ class WiFi (Radio.Radio):
 		return n bytes or whatever is available to read (which is smaller)
 		"""
 		try:
-			data, server = self._sock.recvfrom(n)
+			data, server = self._rSock.recvfrom(n)
 		except socket.timeout:
 			data = []
 
@@ -71,11 +76,16 @@ class WiFi (Radio.Radio):
 
 	def write(self, dest, data):
 		"""
-		Write data bytes
+		Write data bytes. Dest is expected to be a 4 byte list
 
 		return number of bytes written
 		"""
-		sent = self._sock.sendto(data, (dest, self._port))
+		fDest = ''
+		for e in dest:
+			fDest += str(e) + '.'
+
+		fDest = fDest[:-1]
+		sent = self._wSock.sendto(data, (fDest, self._port))
 
 		return sent
 
