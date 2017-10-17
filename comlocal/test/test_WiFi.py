@@ -47,9 +47,11 @@ class TestWiFiRadio(unittest.TestCase):
 		wifiFramework.start()
 	#
 
-	@unittest.skipIf(not wifiFramework.isActive(), "Need WiFi framework to test")
 	def test_wifi_radio_read(self):
-		self.assertEquals(len(self.myRad.read(12)), 12)
+		if wifiFramework.isActive():
+			self.assertEquals(len(self.myRad.read(12)), 12)
+		else:
+			self.assertTrue(False)
 	#
 
 	def test_wifi_radio_write(self):
