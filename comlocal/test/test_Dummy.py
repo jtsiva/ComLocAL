@@ -15,7 +15,7 @@ class TestDummyRadio(unittest.TestCase):
 	#
 
 	def test_dummy_radio_write(self):
-		self.assertEquals(self.myRad.write('hello'), 5)
+		self.assertEquals(self.myRad.write([192,168,0,1], 'hello'), 5)
 	#
 
 	def test_dummmy_radio_properties_address(self):

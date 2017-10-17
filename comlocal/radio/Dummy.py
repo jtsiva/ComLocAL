@@ -85,9 +85,9 @@ class Dummy(Radio.Radio):
 
 		return retBytes
 
-	def write(self, data):
+	def write(self, dest, data):
 		"""
-		Write data
+		Write data to dest
 
 		return number of bytes "written"
 		"""

@@ -51,12 +51,20 @@ class Packet:
 		#
 	#
 
+	def getDest(self):
+		return self._dest
+	#
+
 	def setSrc (self, srcAddr):
 		self._src = re.sub('[^0-9a-zA-Z]+', ' ', srcAddr).split()
 		self._src = [self._digitForAddress(val) for val in self._src]
 		if 0 != len(self._dest) and 0 != len(self._src):
 			self._addrSet = True
 		#
+	#
+
+	def getSrc(self):
+		return self._src
 	#
 
 	def _calcChkSum (self):

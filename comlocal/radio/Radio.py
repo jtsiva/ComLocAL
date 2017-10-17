@@ -21,9 +21,9 @@ class Radio(object):
 		"""
 		pass
 
-	def write(self, data):
+	def write(self, dest, data):
 		"""
-		Write data (bytearray)
+		Write data (bytearray) to radio destined for dest
 
 		return number of bytes written
 		"""

@@ -31,13 +31,11 @@ class WiFi (Radio.Radio):
 		self._name = 'WiFi'
 		super(WiFi, self).__init__(self._setupProperties())
 
-		self._groupAddr = '224.0.2.47'
-		self._port = 10000
-		self._multicastGroup = (self._groupAddr, self._port)
+		self._port = 10247
 		self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-		self._sock.settimeout(0.2)
-		ttl = struct.pack('b', 1)
-		self._sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
+		self._sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+		self._sock.settimeout(.05)
+	#
 
 	def __del__(self):
 		self._sock.close()
@@ -71,13 +69,13 @@ class WiFi (Radio.Radio):
 
 		return data
 
-	def write(self, data):
+	def write(self, dest, data):
 		"""
 		Write data bytes
 
 		return number of bytes written
 		"""
-		sent = self._sock.sendto(data, self._multicastGroup)
+		sent = self._sock.sendto(data, (dest, self._port))
 
 		return sent
 

@@ -30,7 +30,7 @@ class TestWiFiRadio(unittest.TestCase):
 	#
 
 	def test_wifi_radio_write(self):
-		self.assertEquals(self.myRad.write('hello'), 5)
+		self.assertEquals(self.myRad.write('10.2.1.1', 'hello'), 5)
 	#
 
 	def test_wifi_radio_properties_address(self):
