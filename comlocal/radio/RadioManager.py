@@ -74,7 +74,7 @@ class RadioManager:
 		while self._threadsRunning:
 			try:
 				packet = self._outQ.get(False)
-				self._radio.write(packet.getBytes())
+				self._radio.write(packet.getDest(), packet.getBytes())
 			except Empty:
 				pass
 		#

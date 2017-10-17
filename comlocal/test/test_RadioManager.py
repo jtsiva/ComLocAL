@@ -27,6 +27,10 @@ class TestRadioManager(unittest.TestCase):
 		#
 	#
 
+	def test_radio_manager_write_packet(self):
+		p = self.radManager.read(1)[0]
+		self.assertEquals(self.radManager.write([p]), 1)
+
 #
 
 if __name__ == '__main__':
