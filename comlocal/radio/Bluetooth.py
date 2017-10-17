@@ -1,6 +1,5 @@
 
 
-
 class Bluetooth (Radio):
 	"""
 	Abstracts all communication over Bluetooth / BLE

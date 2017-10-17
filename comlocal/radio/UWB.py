@@ -1,5 +1,4 @@
 
-
 class UWB (Radio):
 	"""
 	Abstracts all communication over UWB
