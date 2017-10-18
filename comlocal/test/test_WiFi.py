@@ -9,28 +9,32 @@ import os
 class WiFiTestFramework(object):
 	def __init__(self):
 		self.active = False
+		self.rsock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+		self.wsock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+		self.rsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+		self.wsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+		self.wsock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+		self.rsock.settimeout(1)
+		self.rsock.bind(('0.0.0.0', 10247))
 
 	def start(self):
 		"""
 		Check/start simple server is running on a device in the
 		ad-hoc network with address 10.2.1.1
 		"""
-		rsock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-		wsock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-		rsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-		wsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-		wsock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-		rsock.settimeout(1)
-		rsock.bind(('0.0.0.0', 10247))
+		
 
-		wsock.sendto("start?", ('10.2.1.1', 10247))
+		self.wsock.sendto("start?", ('10.2.1.1', 10247))
 
 		try:
-			data, addr = rsock.recvfrom(6)
+			data, addr = self.rsock.recvfrom(6)
 			if "start!" in data:
 				self.active = True
 		except socket.timeout:
 			pass
+
+	def stop (self):
+		self.wsock.sendto("stop", ('10.2.1.1', 10247))
 
 	def isActive(self):
 		"""
@@ -47,6 +51,9 @@ class TestWiFiRadio(unittest.TestCase):
 		self.myRad = WiFi.WiFi()
 		wifiFramework.start()
 	#
+
+	def tearDown(self):
+		wifiFramework.stop()
 
 	@unittest.skipIf(not os.uname()[4].startswith("arm"), "Not on RPi")
 	def test_wifi_radio_read(self):
@@ -74,6 +81,14 @@ class TestWiFiRadio(unittest.TestCase):
 	def test_wifi_radio_scan(self):
 		neighbors = self.myRad.scan()
 		self.assertTrue(len(neighbors) >  0)
+	#
+
+	def test_radio_manager__wifi_scan(self):
+		wifiRadMgr = RadioManager.RadioManager(self.myRad)
+		try:
+			self.assertTrue(len(wifiRadMgr.scan()) > 0)
+		finally:
+			wifiRadMgr.stop()
 
 
 if __name__ == '__main__':
