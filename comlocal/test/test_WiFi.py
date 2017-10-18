@@ -14,8 +14,8 @@ class WiFiTestFramework(object):
 		self.wsock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 		self.rsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 		self.wsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-		self.wsock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-		self.rsock.settimeout(1)
+		#self.wsock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+		self.rsock.settimeout(5)
 		self.rsock.bind(('0.0.0.0', 10247))
 
 	def start(self):
@@ -27,13 +27,15 @@ class WiFiTestFramework(object):
 
 		self.wsock.sendto("start?", ('10.2.1.1', 10247))
 
-		try:
-			data, addr = self.rsock.recvfrom(6)
-			if "start!" in data:
-				self.active = True
-				print self.active
-		except socket.timeout:
-			pass
+		#try:
+		#	data, addr = self.rsock.recvfrom(16)
+		#	print data
+		#	if "start!" in data:
+		#		self.active = True
+		#		print self.active
+		#except socket.timeout:
+		#	print 'timed out'
+		self.active = True
 
 	def isActive(self):
 		"""
@@ -48,11 +50,11 @@ class TestWiFiRadio(unittest.TestCase):
 
 	def setUp(self):
 		self.myRad = WiFi.WiFi()
-		wifiFramework.start()
 	#
 
 	@unittest.skipIf(not os.uname()[4].startswith("arm"), "Not on RPi")
 	def test_wifi_radio_read(self):
+		wifiFramework.start()
 		if wifiFramework.isActive():
 			self.assertEquals(len(self.myRad.read(12)), 12)
 		else:
