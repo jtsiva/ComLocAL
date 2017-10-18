@@ -14,7 +14,7 @@ class WiFiTestFramework(object):
 		self.wsock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 		self.rsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 		self.wsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-		#self.wsock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+		self.wsock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 		self.rsock.settimeout(5)
 		self.rsock.bind(('0.0.0.0', 10247))
 
@@ -27,14 +27,6 @@ class WiFiTestFramework(object):
 
 		self.wsock.sendto("start?", ('10.2.1.1', 10247))
 
-		#try:
-		#	data, addr = self.rsock.recvfrom(16)
-		#	print data
-		#	if "start!" in data:
-		#		self.active = True
-		#		print self.active
-		#except socket.timeout:
-		#	print 'timed out'
 		self.active = True
 
 	def isActive(self):
