@@ -53,7 +53,7 @@ class RadioManager:
 				inBytes.append(b)
 
 				if pos == DATA_LEN_BYTE:
-					dataLen = b
+					dataLen = int(b)
 				#
 
 				if pos == (DATA_LEN_BYTE + dataLen + 1):

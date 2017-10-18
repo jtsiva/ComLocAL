@@ -118,6 +118,8 @@ class WiFi (Radio.Radio):
 		except subprocess.CalledProcessError:
 			neighbors = []
 
+		#TODO: remove self from nb, use to detect fail?
+
 		return neighbors
 
 	def range(self):
