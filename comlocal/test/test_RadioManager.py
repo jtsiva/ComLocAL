@@ -10,6 +10,7 @@ class TestRadioManager(unittest.TestCase):
 	def setUp(self):
 		self.myRad = Dummy.Dummy()
 		self.radManager = RadioManager.RadioManager(self.myRad)
+		self.radManager.start()
 	#
 
 	def tearDown(self):

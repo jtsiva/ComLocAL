@@ -10,8 +10,8 @@ class RadioManager:
 		self._inQ = Queue()
 		self._outQ = Queue()
 		self._radio = myRad
-		self.start()
-		
+		self._readThread = threading.Thread(target=self._procRead)
+		self._writeThread = threading.Thread(target=self._procWrite)
 	#
 
 	def __del__(self):
@@ -21,8 +21,7 @@ class RadioManager:
 
 	def start(self):
 		self._threadsRunning = True
-		self._readThread = threading.Thread(target=self._procRead)
-		self._writeThread = threading.Thread(target=self._procWrite)
+		
 		
 		self._readThread.start()
 		self._writeThread.start()

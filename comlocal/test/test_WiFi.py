@@ -84,9 +84,8 @@ class TestWiFiRadio(unittest.TestCase):
 		self.assertTrue(len(neighbors) >  0)
 	#
 
-	def test_radio_manager__wifi_scan(self):
+	def test_radio_manager_wifi_scan(self):
 		wifiRadMgr = RadioManager.RadioManager(self.myRad)
-		wifiRadMgr.stop()
 		self.assertTrue(len(wifiRadMgr.scan()) > 0)
 
 			
