@@ -45,27 +45,33 @@ class RadioManager:
 		dataLen = 0
 		inBytes = []
 		while self._threadsRunning:
-			b = self._radio.read(1)
+			try:
+				b = self._radio.read(1)
 
-			if len(b) != 0:
-				b = b[0]
+				if len(b) != 0:
+					b = b[0]
 
-				inBytes.append(b)
+					inBytes.append(b)
 
-				if pos == DATA_LEN_BYTE:
-					dataLen = int(b)
+					if pos == DATA_LEN_BYTE:
+						dataLen = int(b)
+					#
+
+					if pos == (DATA_LEN_BYTE + dataLen + 1):
+						packet = Packet.Packet(fromBytes=inBytes)
+						self._inQ.put(packet)
+						pos = 0
+						dataLen = 0
+						inBytes = []
+					else:
+						pos += 1
+					#
 				#
-
-				if pos == (DATA_LEN_BYTE + dataLen + 1):
-					packet = Packet.Packet(fromBytes=inBytes)
-					self._inQ.put(packet)
-					pos = 0
-					dataLen = 0
-					inBytes = []
-				else:
-					pos += 1
-				#
-			#
+			except:
+				# any errors => discard work
+				inBytes = []
+				pos = 0
+				dataLen = 0
 		#
 	#
 
