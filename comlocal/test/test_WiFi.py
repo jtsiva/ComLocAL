@@ -3,6 +3,7 @@
 import socket
 import unittest
 from radio import WiFi
+from radio import RadioManager
 from util import Packet
 import os
 
