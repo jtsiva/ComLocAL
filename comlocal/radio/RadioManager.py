@@ -45,23 +45,27 @@ class RadioManager:
 		dataLen = 0
 		inBytes = []
 		while self._threadsRunning:
-			b = self._radio.read(1)[0]
+			b = self._radio.read(1)
 
-			inBytes.append(b)
+			if len(b) != 0:
+				b = b[0]
 
-			if pos == DATA_LEN_BYTE:
-				dataLen = b
+				inBytes.append(b)
+
+				if pos == DATA_LEN_BYTE:
+					dataLen = b
+				#
+
+				if pos == (DATA_LEN_BYTE + dataLen + 1):
+					packet = Packet.Packet(fromBytes=inBytes)
+					self._inQ.put(packet)
+					pos = 0
+					dataLen = 0
+					inBytes = []
+				else:
+					pos += 1
+				#
 			#
-
-			if pos == (DATA_LEN_BYTE + dataLen + 1):
-				packet = Packet.Packet(fromBytes=inBytes)
-				self._inQ.put(packet)
-				pos = 0
-				dataLen = 0
-				inBytes = []
-			else:
-				pos += 1
-			#	
 		#
 	#
 
@@ -107,9 +111,18 @@ class RadioManager:
 
 	def scan(self):
 		"""
-		pass-through
+		Try Radio scan. If this fails then use Packet-based discovery protocol
+		
+		TODO: Catch exception to detect Radio scan failure.
+		An empty list is a failure now (10/18/17)
 		"""
-		return self._radio.scan()
+		neighbors =  self._radio.scan()
+
+		if len(neighbors) == 0:
+			#TODO: implement fall-back scan protocol
+			pass
+
+		return neighbors
 
 	def range(self):
 		"""

@@ -1,10 +1,11 @@
 
 from util import Properties
-from radio import Radio
+import Radio
 import socket
 import struct
 import fcntl
 import sys
+import subprocess
 
 class WiFi (Radio.Radio):
 	"""
@@ -103,10 +104,21 @@ class WiFi (Radio.Radio):
 
 	def scan(self):
 		"""
-		Send some sort of HELLO message to other radios listening for it.
-		Think of this as the discovery protocol for a given radio.
+		Get list of IP addresses for 1 hop neighbors
+		Can discover all 1-hop neighbors by using nmap
+
+		Return list if successful, empty list otherwise
+		TODO: define exception to be thrown to differentiate between failure
+		and no neighbors (10/18/17)
 		"""
-		pass
+		try:
+			addrToSearch = self.getProperties().addr[:7] + '0/24'
+			output = subprocess.check_output("nmap -n -sn " + addrToSearch + " -oG - | awk '/Up$/{print $2}'", shell=True)
+			neighbors = output.split()
+		except subprocess.CalledProcessError:
+			neighbors = []
+
+		return neighbors
 
 	def range(self):
 		"""

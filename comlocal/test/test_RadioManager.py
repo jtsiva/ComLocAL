@@ -3,6 +3,7 @@
 import unittest
 from radio import RadioManager
 from radio import Dummy
+from radio import WiFi
 
 class TestRadioManager(unittest.TestCase):
 
@@ -30,7 +31,15 @@ class TestRadioManager(unittest.TestCase):
 	def test_radio_manager_write_packet(self):
 		p = self.radManager.read(1)[0]
 		self.assertEquals(self.radManager.write([p]), 1)
+	#
 
+	def test_radio_manager_scan(self):
+		radWifi = WiFi.WiFi()
+		wifiRadMgr = RadioManager.RadioManager(radWifi)
+		try:
+			self.assertTrue(len(wifiRadMgr.scan()) > 0)
+		finally:
+			wifiRadMgr.stop()
 #
 
 if __name__ == '__main__':

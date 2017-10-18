@@ -4,6 +4,7 @@ import socket
 import unittest
 from radio import WiFi
 from util import Packet
+import os
 
 class WiFiTestFramework(object):
 	def __init__(self):
@@ -47,6 +48,7 @@ class TestWiFiRadio(unittest.TestCase):
 		wifiFramework.start()
 	#
 
+	@unittest.skipIf(not os.uname()[4].startswith("arm"), "Not on RPi")
 	def test_wifi_radio_read(self):
 		if wifiFramework.isActive():
 			self.assertEquals(len(self.myRad.read(12)), 12)
@@ -58,6 +60,7 @@ class TestWiFiRadio(unittest.TestCase):
 		self.assertEquals(self.myRad.write([10,2,1,1], 'hello'), 5)
 	#
 
+	@unittest.skipIf(not os.uname()[4].startswith("arm"), "Not on RPi")
 	def test_wifi_radio_properties_address(self):
 		props = self.myRad.getProperties()
 		self.assertEquals('10.2.1', props.addr[:6])
@@ -67,6 +70,10 @@ class TestWiFiRadio(unittest.TestCase):
 		props = self.myRad.getProperties()
 		self.assertEquals(512, props.maxPacketLength)
 	#
+
+	def test_wifi_radio_scan(self):
+		neighbors = self.myRad.scan()
+		self.assertTrue(len(neighbors) >  0)
 
 
 if __name__ == '__main__':

@@ -43,8 +43,7 @@ class Radio(object):
 
 	def scan(self):
 		"""
-		Send some sort of HELLO message to other radios listening for it.
-		Think of this as the discovery protocol for a given radio.
+		Return a list of 1-hop neighbors
 		"""
 		pass
 
