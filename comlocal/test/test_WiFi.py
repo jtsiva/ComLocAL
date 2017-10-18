@@ -34,9 +34,6 @@ class WiFiTestFramework(object):
 		except socket.timeout:
 			pass
 
-	def stop (self):
-		self.wsock.sendto("stop", ('10.2.1.1', 10247))
-
 	def isActive(self):
 		"""
 		Return True if ready for testing
@@ -52,9 +49,6 @@ class TestWiFiRadio(unittest.TestCase):
 		self.myRad = WiFi.WiFi()
 		wifiFramework.start()
 	#
-
-	def tearDown(self):
-		wifiFramework.stop()
 
 	@unittest.skipIf(not os.uname()[4].startswith("arm"), "Not on RPi")
 	def test_wifi_radio_read(self):
