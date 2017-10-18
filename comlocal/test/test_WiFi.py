@@ -86,10 +86,10 @@ class TestWiFiRadio(unittest.TestCase):
 
 	def test_radio_manager__wifi_scan(self):
 		wifiRadMgr = RadioManager.RadioManager(self.myRad)
-		try:
-			self.assertTrue(len(wifiRadMgr.scan()) > 0)
-		finally:
-			wifiRadMgr.stop()
+		wifiRadMgr.stop()
+		self.assertTrue(len(wifiRadMgr.scan()) > 0)
+
+			
 
 
 if __name__ == '__main__':

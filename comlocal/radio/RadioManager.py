@@ -115,6 +115,10 @@ class RadioManager:
 		return len(packets)
 	#
 
+	def getProperties(self):
+		return self._radio.getProperties()
+	#
+
 	def scan(self):
 		"""
 		Try Radio scan. If this fails then use Packet-based discovery protocol
@@ -129,12 +133,14 @@ class RadioManager:
 			pass
 
 		return neighbors
+	#
 
 	def range(self):
 		"""
-		pass-through
+		pass-through mostly, could also put some history / processing here
 		"""
 		return self._radio.range()
+	#
 
 
 #
