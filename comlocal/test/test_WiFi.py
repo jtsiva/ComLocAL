@@ -31,6 +31,7 @@ class WiFiTestFramework(object):
 			data, addr = self.rsock.recvfrom(6)
 			if "start!" in data:
 				self.active = True
+				print self.active
 		except socket.timeout:
 			pass
 
