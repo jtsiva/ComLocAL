@@ -10,8 +10,8 @@ class RadioManager:
 		self._inQ = Queue()
 		self._outQ = Queue()
 		self._radio = myRad
-		self.start()
-		
+		self._readThread = threading.Thread(target=self._procRead)
+		self._writeThread = threading.Thread(target=self._procWrite)
 	#
 
 	def __del__(self):
@@ -21,8 +21,7 @@ class RadioManager:
 
 	def start(self):
 		self._threadsRunning = True
-		self._readThread = threading.Thread(target=self._procRead)
-		self._writeThread = threading.Thread(target=self._procWrite)
+		
 		
 		self._readThread.start()
 		self._writeThread.start()
@@ -45,23 +44,33 @@ class RadioManager:
 		dataLen = 0
 		inBytes = []
 		while self._threadsRunning:
-			b = self._radio.read(1)[0]
+			try:
+				b = self._radio.read(1)
 
-			inBytes.append(b)
+				if len(b) != 0:
+					b = b[0]
 
-			if pos == DATA_LEN_BYTE:
-				dataLen = b
-			#
+					inBytes.append(b)
 
-			if pos == (DATA_LEN_BYTE + dataLen + 1):
-				packet = Packet.Packet(fromBytes=inBytes)
-				self._inQ.put(packet)
+					if pos == DATA_LEN_BYTE:
+						dataLen = int(b)
+					#
+
+					if pos == (DATA_LEN_BYTE + dataLen + 1):
+						packet = Packet.Packet(fromBytes=inBytes)
+						self._inQ.put(packet)
+						pos = 0
+						dataLen = 0
+						inBytes = []
+					else:
+						pos += 1
+					#
+				#
+			except:
+				# any errors => discard work
+				inBytes = []
 				pos = 0
 				dataLen = 0
-				inBytes = []
-			else:
-				pos += 1
-			#	
 		#
 	#
 
@@ -74,7 +83,7 @@ class RadioManager:
 		while self._threadsRunning:
 			try:
 				packet = self._outQ.get(False)
-				self._radio.write(packet.getBytes())
+				self._radio.write(packet.getDest(), packet.getBytes())
 			except Empty:
 				pass
 		#
@@ -105,17 +114,32 @@ class RadioManager:
 		return len(packets)
 	#
 
+	def getProperties(self):
+		return self._radio.getProperties()
+	#
+
 	def scan(self):
 		"""
-		pass-through
+		Try Radio scan. If this fails then use Packet-based discovery protocol
+		
+		TODO: Catch exception to detect Radio scan failure.
+		An empty list is a failure now (10/18/17)
 		"""
-		return self._radio.scan()
+		neighbors =  self._radio.scan()
+
+		if len(neighbors) == 0:
+			#TODO: implement fall-back scan protocol
+			pass
+
+		return neighbors
+	#
 
 	def range(self):
 		"""
-		pass-through
+		pass-through mostly, could also put some history / processing here
 		"""
 		return self._radio.range()
+	#
 
 
 #
