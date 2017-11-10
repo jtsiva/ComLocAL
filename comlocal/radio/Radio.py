@@ -3,7 +3,7 @@ from util import Properties
 class Radio(object):
 	"""
 	'Abstract' class used to provide the basic functionality of the
-	radios to be used by CommLocAL. Reading and writing are found here
+	radios to be used by ComLocAL. Reading and writing are found here
 
 	  frame length
 	  max range
@@ -13,19 +13,16 @@ class Radio(object):
 		self._name = 'NULL'
 		self._props = props
 
-	def read(self, n):
-		"""
-		Read n bytes as bytearray
 
-		return n bytes or whatever is available to read (which is smaller)
+	def read(self):
+		"""
+		Read from radio and return json object
 		"""
 		pass
 
-	def write(self, dest, data):
+	def write(self, data):
 		"""
-		Write data (bytearray) to radio destined for dest
-
-		return number of bytes written
+		write json object to radio
 		"""
 		pass
 
@@ -40,12 +37,6 @@ class Radio(object):
 		"""
 		return self._props
 
-
-	def scan(self):
-		"""
-		Return a list of 1-hop neighbors
-		"""
-		pass
 
 	def range(self):
 		"""
