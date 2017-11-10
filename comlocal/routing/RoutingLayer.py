@@ -1,5 +1,5 @@
 
-from comlocal.connection import ConnectionManager
+
 class Stats(object):
 	def __init__(self):
 		self.packetsDropped = 0 #poorly formed packets
@@ -7,13 +7,15 @@ class Stats(object):
 class RoutingLayer(object):
 	def __init__(self, commonData):
 		self._commonData = commonData
-		self._connMgr = ConnectionManager.ConnectionManager(commonData)
 		self._routingTable = {}
 		self._stats = Stats()
 
+	def setRead(self, cb):
+		self._readCB = cb
+
 	def read(self):
 		"""
-		Read from the connection manager and filter through the
+		Read from the callback and filter through the
 		messages to determine who needs to handle what. All messages
 		intended for this agent will be returned.
 
@@ -21,9 +23,9 @@ class RoutingLayer(object):
 
 		Returns a list of message (can be an empty list)
 		"""
-		messages = self._connMgr.read()
+		messages = self.readCB()
 
-		#TODO: filter out poorly form messages
+		#TODO: filter out poorly formed messages
 		#TODO: update routing table
 
 
@@ -49,6 +51,9 @@ class RoutingLayer(object):
 
 
 	def _needsForward(self, msg):
+		"""
+		Check if the message is intended for this node or not
+		"""
 		try:
 			return msg['dest'] != self._commonData.id
 		except KeyError:
@@ -58,8 +63,11 @@ class RoutingLayer(object):
 		self.write(msg)
 		return msg
 
+	def setWrite(self, cb):
+		self._writeCB = cb
+
 	def write(self, msg):
-		self._connMgr.write(msg)
+		self._writeCB(msg)
 
 
 # NOT SURE IF I WANT TO HANDLE THIS HERE OR THE MESSAGE LAYER

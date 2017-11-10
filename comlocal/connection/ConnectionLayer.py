@@ -1,6 +1,5 @@
 
 from comlocal.radio import Radio
-from comlocal.radio import WiFi
 import threading
 import time
 
@@ -12,27 +11,21 @@ class Stats(object):
 		self.packetsDropped = 0 #poorly formed packets
 		self.up = True
 
-class ConnectionManager(object):
+class ConnectionLayer(object):
 	"""
 	This class is responsible for implementing network protocols,
 	maintaining connections, and managing the state of the hardware
 
 	"""
 
-	def __init__(self, commonData):
+	def __init__(self, commonData, radioList):
 		self._commonData = commonData
-		self._radioList = self._getAvailableRadios() #prioritized list of radios
+		self._radioList = radioList #prioritized list of radio objects
 		self._radioStats = {}
 		for radio in self._radioList:
 			self._radioStats[radio._name()] = Stats()
 		#
 	#
-
-	def _getAvailableRadios(self):
-		"""
-		Eventually read from config file
-		"""
-		return [WiFi.WiFi()]
 
 	def _checkRadios(self):
 		"""
@@ -48,14 +41,14 @@ class ConnectionManager(object):
 		for radio in self._radioList:
 			radio.write(json.loads('{"type":ping, "payload":}'))
 
-	def _handlePing(self, pings):
+	def _handlePing(self, ping):
 		"""
 		Do something with a ping
 		TODO: implement
 		"""
 		pass
 
-	def _isPing(self, msg):
+	def _isPing(msg):
 		try:
 			return msg["type"] == "ping"
 		except KeyError:
@@ -80,8 +73,8 @@ class ConnectionManager(object):
 			data.append(_addRadioField(radio.read(), radio._name))
 		#
 
-		self._handlePing(filter(lambda x: self._isPing(x), data))
-		return filter(lambda x: not self._isPing(x), data)
+		map(lambda h: self._handlePing(h), filter(lambda x: _isPing(x), data))
+		return filter(lambda x: not _isPing(x), data)
 	#
 
 	def chooseRadios(self, msg):
