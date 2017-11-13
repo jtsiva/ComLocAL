@@ -23,8 +23,11 @@ class ConnectionLayer(object):
 		self._radioList = radioList #prioritized list of radio objects
 		self._radioStats = {}
 		for radio in self._radioList:
-			self._radioStats[radio._name()] = Stats()
+			self._radioStats[radio._name] = Stats()
 		#
+
+		self._checkRadios() #weed out any radios that are not *actually* active
+		self._commonData.activeRadios = [radio._name for radio in self._radioList] #initialize commonData
 	#
 
 	def _checkRadios(self):
@@ -48,13 +51,22 @@ class ConnectionLayer(object):
 		"""
 		pass
 
-	def _isPing(msg):
+	def _isPing(self, msg):
 		try:
 			return msg["type"] == "ping"
 		except KeyError:
 			return False
 
-	def _addRadioField(msg, radioName):
+	def _addRadioField(self, msg, radioName):
+		"""
+		Add a field to the message indicating which interface the message
+		arrived on.
+		"""
+		try:
+			del msg['radios'] #appended by sender but not needed on read
+		except Exception as e:
+			pass #do nothing (this *might* be useful later)
+
 		msg['radio'] = radioName
 		return msg
 
@@ -70,11 +82,12 @@ class ConnectionLayer(object):
 		"""
 		data = []
 		for radio in self._radioList:
-			data.append(_addRadioField(radio.read(), radio._name))
+			msg = radio.read()
+			None if not msg else data.append(self._addRadioField(msg, radio._name))
 		#
 
-		map(lambda h: self._handlePing(h), filter(lambda x: _isPing(x), data))
-		return filter(lambda x: not _isPing(x), data)
+		map(lambda h: self._handlePing(h), filter(lambda x: self._isPing(x), data))
+		return filter(lambda x: not self._isPing(x), data)
 	#
 
 	def chooseRadios(self, msg):

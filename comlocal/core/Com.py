@@ -1,5 +1,5 @@
 
-from comlocal.radio import *
+from comlocal.radio import WiFi
 from comlocal.connection import ConnectionLayer
 from comlocal.routing import RoutingLayer
 from comlocal.util import CommonData
@@ -10,15 +10,15 @@ class Com(object):
 	def __init__(self):
 		self._commonData = CommonData.CommonData()
 		self._connL = ConnectionLayer.ConnectionLayer(self._commonData, self._getRadios())
-		self._routerL = RoutingLayer.RoutingLayer(self._commonData)
+		self._routeL = RoutingLayer.RoutingLayer(self._commonData)
 		self._messageL = MessageLayer.MessageLayer(self._commonData)
 
 		#set up connections between layers
-		self._router.setRead(self._connMgr.read)
-		self._router.setWrite(self._connMgr.write)
+		self._routeL.setRead(self._connL.read)
+		self._routeL.setWrite(self._connL.write)
 
-		self._messageL.setRead(self._router.read)
-		self._messageL.setWrite(self._router.write)
+		self._messageL.setRead(self._routeL.read)
+		self._messageL.setWrite(self._routeL.write)
 
 	def _initCommonData(self):
 		"""

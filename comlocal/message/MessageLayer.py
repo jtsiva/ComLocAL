@@ -12,10 +12,10 @@ class MessageLayer(object):
 		self._readCB = cb
 
 	def read(self):
-		return self._readCB
+		return self._readCB()
 
 	def setWrite(self, cb):
 		self._writeCB = cb
 
 	def write(self, msg):
-		self.writeCB(msg)
+		return self._writeCB(msg)

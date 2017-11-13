@@ -2,6 +2,8 @@
 from comlocal.util import Properties
 import Radio
 import socket
+import fcntl
+import struct
 import json
 
 class WiFi (Radio.Radio):
@@ -13,8 +15,8 @@ class WiFi (Radio.Radio):
 
 	"""
 	def __init__ (self):
-		self._name = 'WiFi'
 		super(WiFi, self).__init__(self._setupProperties())
+		self._name = 'WiFi'
 
 		self._port = 10247
 		self._rSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -25,7 +27,7 @@ class WiFi (Radio.Radio):
 		self._rSock.settimeout(.05)
 		self._rSock.bind(('0.0.0.0', self._port))
 
-		t = self._getProperties().addr.split('.')
+		t = self.getProperties().addr.split('.')
 		t[-1] = '255'
 		self._broadcastAddr = ('.'.join(t), self._port)
 	#
@@ -57,11 +59,13 @@ class WiFi (Radio.Radio):
 		Non blocking
 		"""
 		try:
-			data = self._rSock.recv(self.getProperties().maxPacketLength)
+			data, address = self._rSock.recvfrom(self.getProperties().maxPacketLength)
 		except socket.timeout:
 			data = '{}'
 
-		return json.loads(data)
+		tmp = json.loads(data)
+		tmp['sentby'] = address[0] #want the ip address
+		return tmp
 	#
 
 	def write(self, data):

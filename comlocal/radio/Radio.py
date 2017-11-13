@@ -1,4 +1,4 @@
-from util import Properties
+from comlocal.util import Properties
 
 class Radio(object):
 	"""

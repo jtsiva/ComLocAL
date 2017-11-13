@@ -23,17 +23,17 @@ class RoutingLayer(object):
 
 		Returns a list of message (can be an empty list)
 		"""
-		messages = self.readCB()
+		messages = self._readCB()
 
 		#TODO: filter out poorly formed messages
 		#TODO: update routing table
 
 
 		#get messages that need to be forwarded and forward
-		r = map(lambda x: self._handleFoward(x), filter(lambda x: self._needsFoward(x), messages))
+		r = map(lambda x: self._handleFoward(x), filter(lambda x: self._needsForward(x), messages))
 		try:
 			#get messages that need to handled by command handler and handle
-			r += map(lambda x: self._handleCmd(x), filter(lambda x: (not self._needsFoward(x)) and _isCommand(x), messages))
+			r += map(lambda x: self._handleCmd(x), filter(lambda x: (not self._needsForward(x)) and self._isCommand(x), messages))
 		except Exception as e:
 			print 'Command handler not set?'
 			raise e
@@ -63,11 +63,20 @@ class RoutingLayer(object):
 		self.write(msg)
 		return msg
 
+	def _route(self, msg):
+		"""
+		Determine route/radio to use. This information is added to the msg
+		
+		TODO: add actual routing algorithms here
+		"""
+		msg['radios'] = self._commonData.activeRadios
+		return msg
+
 	def setWrite(self, cb):
 		self._writeCB = cb
 
 	def write(self, msg):
-		self._writeCB(msg)
+		return self._writeCB(self._route(msg))
 
 
 # NOT SURE IF I WANT TO HANDLE THIS HERE OR THE MESSAGE LAYER
@@ -79,7 +88,7 @@ class RoutingLayer(object):
 		"""
 		self._cmdHandler = cb
 
-	def _isCommand(msg):
+	def _isCommand(self, msg):
 		try:
 			return msg['type'] == "cmd"
 		except KeyError:
