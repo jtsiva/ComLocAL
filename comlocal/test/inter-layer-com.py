@@ -1,4 +1,8 @@
 #!/usr/bin/python
+"""
+Basic usage of module for use with debugger
+
+"""
 
 from comlocal.core import Com
 import json

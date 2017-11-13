@@ -10,7 +10,7 @@ import threading
 
 class Com(object):
 	def __init__(self):
-		self._commonData = CommonData.CommonData()
+		self._commonData = self._initCommonData(CommonData.CommonData())
 		self._connL = ConnectionLayer.ConnectionLayer(self._commonData, self._getRadios())
 		self._routeL = RoutingLayer.RoutingLayer(self._commonData)
 		self._messageL = MessageLayer.MessageLayer(self._commonData)
@@ -26,13 +26,14 @@ class Com(object):
 		self._inQ = Queue.Queue()
 		self._outQ = Queue.Queue()
 
-	def _initCommonData(self):
+	def _initCommonData(self, commonData):
 		"""
 		Init the common data by, say, reading from a file
 
 		TODO: read beginning config from file
 		"""
-		self._commonData.id = random.randRange(255)
+		commonData.id = random.randrange(255)
+		return commonData
 
 
 	def _getRadios(self):
