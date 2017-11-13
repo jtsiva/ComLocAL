@@ -69,6 +69,7 @@ class RoutingLayer(object):
 		
 		TODO: add actual routing algorithms here
 		"""
+		msg['src'] = self._commonData.id
 		msg['radios'] = self._commonData.activeRadios
 		return msg
 

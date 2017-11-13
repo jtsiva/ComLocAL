@@ -41,8 +41,11 @@ class ConnectionLayer(object):
 		"""
 		Send basic "Hello!" message on all radios
 		"""
+		ping = json.loads('{"type":"ping"}')
+		ping['src'] = self._commonData.id
+
 		for radio in self._radioList:
-			radio.write(json.loads('{"type":ping, "payload":}'))
+			radio.write(ping)
 
 	def _handlePing(self, ping):
 		"""
