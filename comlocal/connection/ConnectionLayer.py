@@ -47,19 +47,6 @@ class ConnectionLayer(object):
 		for radio in self._radioList:
 			radio.write(ping)
 
-	def _handlePing(self, ping):
-		"""
-		Do something with a ping
-		TODO: implement
-		"""
-		pass
-
-	def _isPing(self, msg):
-		try:
-			return msg["type"] == "ping"
-		except KeyError:
-			return False
-
 	def _addRadioField(self, msg, radioName):
 		"""
 		Add a field to the message indicating which interface the message
@@ -95,8 +82,7 @@ class ConnectionLayer(object):
 			None if not msg else data.append(self._addRadioField(msg, radio._name))
 		#
 
-		map(lambda h: self._handlePing(h), filter(lambda x: self._isPing(x), data))
-		return filter(lambda x: not self._isPing(x), data)
+		return data
 	#
 
 	def chooseRadios(self, msg):

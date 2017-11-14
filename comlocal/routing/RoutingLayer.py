@@ -10,6 +10,14 @@ class RoutingLayer(object):
 		self._routingTable = {}
 		self._stats = Stats()
 
+	def _getRoutes(self):
+		"""
+		Return the routing table in a nice format
+
+		DEBUG function
+		"""
+		return json.dumps(self._routingTable, sort_keys=True, indent=4, separators=(',', ': '))
+
 	def setRead(self, cb):
 		self._readCB = cb
 
@@ -28,12 +36,13 @@ class RoutingLayer(object):
 		#TODO: filter out poorly formed messages
 		#TODO: update routing table
 
+		r = map(lambda h: self._handlePing(h), filter(lambda x: self._isPing(x), messages))
 
 		#get messages that need to be forwarded and forward
-		r = map(lambda x: self._handleFoward(x), filter(lambda x: self._needsForward(x), messages))
+		r += map(lambda h: self._handleFoward(h), filter(lambda x: self._needsForward(x), messages))
 		try:
 			#get messages that need to handled by command handler and handle
-			r += map(lambda x: self._handleCmd(x), filter(lambda x: (not self._needsForward(x)) and self._isCommand(x), messages))
+			r += map(lambda h: self._handleCmd(h), filter(lambda x: (not self._needsForward(x)) and self._isCommand(x), messages))
 		except Exception as e:
 			print 'Command handler not set?'
 			raise e
@@ -41,13 +50,29 @@ class RoutingLayer(object):
 		#return the rest of the messages because these are local
 		return filter(lambda x: x not in r, messages)
 
+	def _handlePing(self, msg):
+		"""
+		Use the ping to update the routing table
+		
+		"""
+		self._updateRoutingTable(msg)
+		#TODO: remove after debugging
+		print self._getRoutes()
+		return msg
+
+	def _isPing(self, msg):
+		try:
+			return msg["type"] == "ping"
+		except KeyError:
+			return False
+
 	def _updateRoutingTable(self, msg):
 		"""
 		Update the routing table based on information from
 		the message. ASSUMES that msg has already been checked
 		for validity
 		"""
-		self._routingTable[msg['dest']][msg['radio']] = msg['from']
+		self._routingTable[msg['src']][msg['radio']] = msg['sentby']
 
 
 	def _needsForward(self, msg):
