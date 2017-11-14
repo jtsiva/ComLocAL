@@ -6,6 +6,7 @@ import sys
 import pdb
 import time
 
+
 def readHandler(msg):
 	readHandler.count += 1
 	readHandler.go = True
@@ -25,12 +26,16 @@ def main():
 		pings = int(sys.argv[1]) if len(sys.argv) > 1 else 1000
 
 		msg = json.loads('{"type":"msg"}')
+		starttime = time.time()
 		while pings > 0:
 			if readHandler.go: #don't send unless we've received
 				msg['payload'] =  pings
 				com.write(msg)
 				pings -= 1
+				starttime = time.time()
 				readHandler.go = False
+			elif time.time() - starttime > 1.0:
+				readHandler.go = True
 			else:
 				time.sleep(0)
 		#
