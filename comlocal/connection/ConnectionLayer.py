@@ -84,8 +84,14 @@ class ConnectionLayer(object):
 		TODO: exception handling for broken things
 		"""
 		data = []
+
 		for radio in self._radioList:
 			msg = radio.read()
+			try:
+				msg = msg if msg['sentby'] != radio.getProperties().addr else None
+			except KeyError:
+				pass
+
 			None if not msg else data.append(self._addRadioField(msg, radio._name))
 		#
 

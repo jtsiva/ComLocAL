@@ -6,11 +6,12 @@ import sys
 import pdb
 
 def readHandler(msg):
+	readHandler.count += 1
 	print json.dumps(msg, sort_keys=True, indent=4, separators=(',', ': '))
 
 def main():
 	com = Com.Com()
-	
+	readHandler.count = 0
 	com.setReadHandler(readHandler)
 	com.start()
 
@@ -34,8 +35,11 @@ def main():
 	finally:
 		com.stop()
 
+	print readHandler.count
+
 
 #
 
 if __name__ == "__main__":
+	pdb.set_trace()
 	main()
