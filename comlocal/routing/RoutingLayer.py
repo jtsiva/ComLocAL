@@ -1,4 +1,4 @@
-
+import pdb
 
 class Stats(object):
 	def __init__(self):
@@ -56,6 +56,7 @@ class RoutingLayer(object):
 		Use the ping to update the routing table
 		
 		"""
+		pdb.set_trace()
 		self._updateRoutingTable(msg)
 		#TODO: remove after debugging
 		print self._getRoutes()

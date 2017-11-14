@@ -4,6 +4,7 @@ import threading
 from multiprocessing import Lock
 import time
 import json
+import pdb
 
 class Stats(object):
 	def __init__(self):
@@ -32,8 +33,6 @@ class ConnectionLayer(object):
 		self._commonData.activeRadios = [radio._name for radio in self._radioList] #initialize commonData
 	
 		self._radioLock = Lock()
-
-		self._ping() #start pinging
 	#
 
 	def _checkRadios(self):
@@ -44,10 +43,18 @@ class ConnectionLayer(object):
 		pass
 	#
 
+	def startPing(self):
+		self._runPing = True
+		self._ping() #start pinging
+
+	def stopPing(self):
+		self._runPing = False
+
 	def _ping(self):
 		"""
 		Send basic "Hello!" message on all radios
 		"""
+
 		ping = json.loads('{"type":"ping"}')
 		ping['src'] = self._commonData.id
 
@@ -57,8 +64,9 @@ class ConnectionLayer(object):
 			#
 		#
 
-		#reschedule for 5 seconds later
-		threading.Timer(5, self._ping).start()
+		if self._runPing:
+			#reschedule for 5 seconds later only if runPing is true
+			threading.Timer(5, self._ping).start()
 	#
 
 

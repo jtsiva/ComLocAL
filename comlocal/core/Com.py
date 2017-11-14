@@ -31,17 +31,23 @@ class Com(object):
 
 		self._readThread = threading.Thread(target=self._procRead)
 		self._writeThread = threading.Thread(target=self._procWrite)
+	
+
 	#
 
 	def __del__(self):
 		self.stop() #can't guarantee this will be called, but this is here jic
 
 	def start(self):
+		self._connL.startPing()
+
 		self._threadsRunning = True
 		self._readThread.start()
 		self._writeThread.start()
 
 	def stop(self):
+		self._connL.stopPing()
+
 		self._threadsRunning = False
 		self._readThread.join()
 		self._writeThread.join()
