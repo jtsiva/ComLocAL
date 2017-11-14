@@ -7,11 +7,13 @@ import pdb
 
 def readHandler(msg):
 	readHandler.count += 1
+	readHandler.go = True
 	print json.dumps(msg, sort_keys=True, indent=4, separators=(',', ': '))
 
 def main():
 	com = Com.Com()
 	readHandler.count = 0
+	readHandler.go = False
 	com.setReadHandler(readHandler)
 	com.start()
 
@@ -23,9 +25,11 @@ def main():
 
 		msg = json.loads('{"type":"msg"}')
 		while pings > 0:
-			msg['payload'] =  pings
-			com.write(msg)
-			pings -= 1
+			if readHandler.go: #don't send unless we've received
+				msg['payload'] =  pings
+				com.write(msg)
+				pings -= 1
+				readHandler.go = False
 		#
 
 		while True:
@@ -41,5 +45,5 @@ def main():
 #
 
 if __name__ == "__main__":
-	pdb.set_trace()
+	#pdb.set_trace()
 	main()
