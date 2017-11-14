@@ -1,6 +1,7 @@
 
 from comlocal.radio import Radio
 import threading
+from multiprocessing import Lock
 import time
 
 class Stats(object):
@@ -28,6 +29,10 @@ class ConnectionLayer(object):
 
 		self._checkRadios() #weed out any radios that are not *actually* active
 		self._commonData.activeRadios = [radio._name for radio in self._radioList] #initialize commonData
+	
+		self._radioLock = Lock()
+
+		self._ping() #start pinging
 	#
 
 	def _checkRadios(self):
@@ -36,6 +41,7 @@ class ConnectionLayer(object):
 		TODO: implement
 		"""
 		pass
+	#
 
 	def _ping(self):
 		"""
@@ -44,8 +50,17 @@ class ConnectionLayer(object):
 		ping = json.loads('{"type":"ping"}')
 		ping['src'] = self._commonData.id
 
-		for radio in self._radioList:
-			radio.write(ping)
+		with self._radioLock:
+			for radio in self._radioList:
+				radio.write(ping)
+			#
+		#
+
+		#reschedule for 5 seconds later
+		threading.Timer(5, self._ping).start()
+	#
+
+
 
 	def _addRadioField(self, msg, radioName):
 		"""
@@ -102,8 +117,10 @@ class ConnectionLayer(object):
 		return true if successful, false otherwise
 		"""
 		try:
-			for radio in filter(lambda x: x._name in msg['radios'], self._radioList):
-				radio.write(msg)
+			with self._radioLock:
+				for radio in filter(lambda x: x._name in msg['radios'], self._radioList):
+					radio.write(msg)
+				#
 			#
 			return True
 		except Exception as e:

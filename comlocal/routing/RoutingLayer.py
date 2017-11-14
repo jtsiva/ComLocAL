@@ -10,14 +10,6 @@ class RoutingLayer(object):
 		self._routingTable = {}
 		self._stats = Stats()
 
-	def _getRoutes(self):
-		"""
-		Return the routing table in a nice format
-
-		DEBUG function
-		"""
-		return json.dumps(self._routingTable, sort_keys=True, indent=4, separators=(',', ': '))
-
 	def setRead(self, cb):
 		self._readCB = cb
 
@@ -49,6 +41,15 @@ class RoutingLayer(object):
 
 		#return the rest of the messages because these are local
 		return filter(lambda x: x not in r, messages)
+
+	def _getRoutes(self):
+		"""
+		Return the routing table in a nice format
+
+		DEBUG function
+		"""
+		return json.dumps(self._routingTable, sort_keys=True, indent=4, separators=(',', ': '))
+
 
 	def _handlePing(self, msg):
 		"""
