@@ -4,6 +4,7 @@ from comlocal.core import Com
 import json
 import sys
 import pdb
+import time
 
 def readHandler(msg):
 	readHandler.count += 1
@@ -30,6 +31,8 @@ def main():
 				com.write(msg)
 				pings -= 1
 				readHandler.go = False
+			else:
+				time.sleep(0)
 		#
 
 		while True:
