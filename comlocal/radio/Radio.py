@@ -13,7 +13,6 @@ class Radio(object):
 		self._name = 'NULL'
 		self._props = props
 
-
 	def read(self):
 		"""
 		Read from radio and return json object

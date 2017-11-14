@@ -1,12 +1,8 @@
 
-import threading
-import Queue
 
 class MessageLayer(object):
 	def __init__(self, commonData):
 		self._commonData = commonData
-		self._inQ = Queue.Queue()
-		self._outQ = Queue.Queue()
 
 	def setRead(self, cb):
 		self._readCB = cb

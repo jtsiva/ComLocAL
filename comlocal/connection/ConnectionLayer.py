@@ -41,8 +41,11 @@ class ConnectionLayer(object):
 		"""
 		Send basic "Hello!" message on all radios
 		"""
+		ping = json.loads('{"type":"ping"}')
+		ping['src'] = self._commonData.id
+
 		for radio in self._radioList:
-			radio.write(json.loads('{"type":ping, "payload":}'))
+			radio.write(ping)
 
 	def _handlePing(self, ping):
 		"""
@@ -81,8 +84,14 @@ class ConnectionLayer(object):
 		TODO: exception handling for broken things
 		"""
 		data = []
+
 		for radio in self._radioList:
 			msg = radio.read()
+			try:
+				msg = msg if msg['sentby'] != radio.getProperties().addr else None
+			except KeyError:
+				pass
+
 			None if not msg else data.append(self._addRadioField(msg, radio._name))
 		#
 

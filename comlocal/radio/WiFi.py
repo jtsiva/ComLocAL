@@ -58,13 +58,15 @@ class WiFi (Radio.Radio):
 
 		Non blocking
 		"""
+
 		try:
 			data, address = self._rSock.recvfrom(self.getProperties().maxPacketLength)
+			tmp = json.loads(data)
+			tmp['sentby'] = address[0] #want the ip address
 		except socket.timeout:
 			data = '{}'
-
-		tmp = json.loads(data)
-		tmp['sentby'] = address[0] #want the ip address
+			tmp = json.loads(data)
+		
 		return tmp
 	#
 
