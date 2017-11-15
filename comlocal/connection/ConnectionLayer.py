@@ -64,6 +64,7 @@ class ConnectionLayer(object):
 			#
 		#
 
+		#TODO: allow ping frequency to be tuned
 		if self._runPing:
 			#reschedule for 5 seconds later only if runPing is true
 			threading.Timer(5, self._ping).start()

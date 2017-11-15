@@ -1,5 +1,6 @@
 
 import json
+import time
 import pdb
 
 class Stats(object):
@@ -44,6 +45,8 @@ class RoutingLayer(object):
 		#return the rest of the messages because these are local
 		return filter(lambda x: x not in r, messages)
 
+	def _
+
 	def _getRoutes(self):
 		"""
 		Return the routing table in a nice format
@@ -77,12 +80,14 @@ class RoutingLayer(object):
 		for validity
 		"""
 
-		if msg['src'] in self._routingTable:
-			self._routingTable[msg['src']][msg['radio']] = msg['sentby']
-		else:
+		if not (msg['src'] in self._routingTable):
 			self._routingTable[msg['src']] = {}
-			self._routingTable[msg['src']][msg['radio']] = msg['sentby']
-		#
+			self._routingTable[msg['src']][msg['radio']] = {}
+
+		self._routingTable[msg['src']][msg['radio']]['addr'] = msg['sentby']
+		self._routingTable[msg['src']][msg['radio']]['time'] = time.time()
+
+	#
 
 	def _needsForward(self, msg):
 		"""
