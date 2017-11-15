@@ -45,7 +45,8 @@ class RoutingLayer(object):
 		#return the rest of the messages because these are local
 		return filter(lambda x: x not in r, messages)
 
-	def _
+	def _ageTable(self):
+		pass
 
 	def _getRoutes(self):
 		"""
