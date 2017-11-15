@@ -74,8 +74,12 @@ class RoutingLayer(object):
 		the message. ASSUMES that msg has already been checked
 		for validity
 		"""
-		self._routingTable[msg['src']][msg['radio']] = msg['sentby']
 
+		if msg['src'] in self._routingTable:
+			self._routingTable[msg['src']][msg['radio']] = msg['sentby']
+		else:
+			self._routingTable[msg['src']] = {}
+		#
 
 	def _needsForward(self, msg):
 		"""
