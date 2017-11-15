@@ -9,9 +9,11 @@ def nope(msg):
 def main():
 	com = Com.Com()
 	com.setReadHandler(nope)
-	com.start()
-	time.sleep(30)
-	com.stop()
+	try:
+		com.start()
+		time.sleep(30)
+	finally:
+		com.stop()
 
 
 
