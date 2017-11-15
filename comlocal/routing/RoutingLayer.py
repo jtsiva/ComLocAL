@@ -68,12 +68,12 @@ class RoutingLayer(object):
 
 		toDelete = {}
 
-		for ID, radio in self._routingTable:
+		for ID, radio in self._routingTable.iteritems():
 			if time.time() - radio['time'] > self._maxAge:
 				toDelete[ID] = radio
 
 		with self._tableLock:
-			for ID, radio in toDelete:
+			for ID, radio in toDelete.iteritems():
 				del self._routingTable[ID][radio]
 
 		if self._runAging:
