@@ -77,6 +77,10 @@ class RoutingLayer(object):
 			for ID, radio in toDelete.iteritems():
 				del self._routingTable[ID][radio]
 
+				#TODO: decide if we want to to completely remove entry
+				# if {} == self._routingTable[ID]:
+				# 	del self._routingTable[ID]
+
 		if self._runAging:
 			#reschedule for later only if runAging is true
 			threading.Timer(self._agingDelay, self._ageTable).start()
@@ -118,6 +122,8 @@ class RoutingLayer(object):
 		with self._tableLock:
 			if not (msg['src'] in self._routingTable):
 				self._routingTable[msg['src']] = {}
+
+			if not (msg['radio'] in self._routingTable[msg['src']]):
 				self._routingTable[msg['src']][msg['radio']] = {}
 
 			self._routingTable[msg['src']][msg['radio']]['addr'] = msg['sentby']
