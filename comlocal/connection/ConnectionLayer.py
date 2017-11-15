@@ -1,7 +1,10 @@
 
 from comlocal.radio import Radio
 import threading
+from multiprocessing import Lock
 import time
+import json
+import pdb
 
 class Stats(object):
 	def __init__(self):
@@ -28,6 +31,8 @@ class ConnectionLayer(object):
 
 		self._checkRadios() #weed out any radios that are not *actually* active
 		self._commonData.activeRadios = [radio._name for radio in self._radioList] #initialize commonData
+	
+		self._radioLock = Lock()
 	#
 
 	def _checkRadios(self):
@@ -36,29 +41,40 @@ class ConnectionLayer(object):
 		TODO: implement
 		"""
 		pass
+	#
+
+	def startPing(self, delay):
+		"""
+		Start sending out a ping to let other devices know
+		we're here. Delay, in seconds, between pings set by delay (float possible)
+		"""
+		self._pingDelay = delay
+		self._runPing = True
+		self._ping() #start pinging
+
+	def stopPing(self):
+		self._runPing = False
 
 	def _ping(self):
 		"""
 		Send basic "Hello!" message on all radios
 		"""
+
 		ping = json.loads('{"type":"ping"}')
 		ping['src'] = self._commonData.id
 
-		for radio in self._radioList:
-			radio.write(ping)
+		with self._radioLock:
+			for radio in self._radioList:
+				radio.write(ping)
+			#
+		#
 
-	def _handlePing(self, ping):
-		"""
-		Do something with a ping
-		TODO: implement
-		"""
-		pass
+		if self._runPing:
+			#reschedule for later only if runPing is true
+			threading.Timer(self._pingDelay, self._ping).start()
+	#
 
-	def _isPing(self, msg):
-		try:
-			return msg["type"] == "ping"
-		except KeyError:
-			return False
+
 
 	def _addRadioField(self, msg, radioName):
 		"""
@@ -95,8 +111,7 @@ class ConnectionLayer(object):
 			None if not msg else data.append(self._addRadioField(msg, radio._name))
 		#
 
-		map(lambda h: self._handlePing(h), filter(lambda x: self._isPing(x), data))
-		return filter(lambda x: not self._isPing(x), data)
+		return data
 	#
 
 	def chooseRadios(self, msg):
@@ -116,8 +131,10 @@ class ConnectionLayer(object):
 		return true if successful, false otherwise
 		"""
 		try:
-			for radio in filter(lambda x: x._name in msg['radios'], self._radioList):
-				radio.write(msg)
+			with self._radioLock:
+				for radio in filter(lambda x: x._name in msg['radios'], self._radioList):
+					radio.write(msg)
+				#
 			#
 			return True
 		except Exception as e:
