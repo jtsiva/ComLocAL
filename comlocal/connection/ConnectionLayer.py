@@ -43,7 +43,12 @@ class ConnectionLayer(object):
 		pass
 	#
 
-	def startPing(self):
+	def startPing(self, delay):
+		"""
+		Start sending out a ping to let other devices know
+		we're here. Delay, in seconds, between pings set by delay (float possible)
+		"""
+		self._pingDelay = delay
 		self._runPing = True
 		self._ping() #start pinging
 
@@ -64,10 +69,9 @@ class ConnectionLayer(object):
 			#
 		#
 
-		#TODO: allow ping frequency to be tuned
 		if self._runPing:
-			#reschedule for 5 seconds later only if runPing is true
-			threading.Timer(5, self._ping).start()
+			#reschedule for later only if runPing is true
+			threading.Timer(self._pingDelay, self._ping).start()
 	#
 
 

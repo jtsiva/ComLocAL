@@ -1,6 +1,8 @@
 
 import json
 import time
+import threading
+from multiprocessing import Lock
 import pdb
 
 class Stats(object):
@@ -12,6 +14,7 @@ class RoutingLayer(object):
 		self._commonData = commonData
 		self._routingTable = {}
 		self._stats = Stats()
+		self._tableLock = Lock()
 
 	def setRead(self, cb):
 		self._readCB = cb
@@ -29,7 +32,7 @@ class RoutingLayer(object):
 		messages = self._readCB()
 
 		#TODO: filter out poorly formed messages
-		#TODO: update routing table
+		#TODO: update routing table with non-ping messages
 
 		r = map(lambda h: self._handlePing(h), filter(lambda x: self._isPing(x), messages))
 
@@ -45,8 +48,38 @@ class RoutingLayer(object):
 		#return the rest of the messages because these are local
 		return filter(lambda x: x not in r, messages)
 
+	def startAging(self, delay, maxAge):
+		"""
+		Start aging the route table where entries older than maxAge
+		are removed. Delay, in seconds, between checks set by delay
+		(float possible)
+		"""
+		self._agingDelay = delay
+		self._maxAge = maxAge
+		self._runAging = True
+		self._ageTable()
+	#
+
+	def stopAging(self):
+		self._runAging = False
+
+
 	def _ageTable(self):
-		pass
+
+		toDelete = {}
+
+		for ID, radio in self._routingTable:
+			if time.time() - radio['time'] > self._maxAge:
+				toDelete[ID] = radio
+
+		with self._tableLock:
+			for ID, radio in toDelete:
+				del self._routingTable[ID][radio]
+
+		if self._runAging:
+			#reschedule for later only if runAging is true
+			threading.Timer(self._agingDelay, self._ageTable).start()
+		#
 
 	def _getRoutes(self):
 		"""
@@ -81,12 +114,13 @@ class RoutingLayer(object):
 		for validity
 		"""
 
-		if not (msg['src'] in self._routingTable):
-			self._routingTable[msg['src']] = {}
-			self._routingTable[msg['src']][msg['radio']] = {}
+		with self._tableLock:
+			if not (msg['src'] in self._routingTable):
+				self._routingTable[msg['src']] = {}
+				self._routingTable[msg['src']][msg['radio']] = {}
 
-		self._routingTable[msg['src']][msg['radio']]['addr'] = msg['sentby']
-		self._routingTable[msg['src']][msg['radio']]['time'] = time.time()
+			self._routingTable[msg['src']][msg['radio']]['addr'] = msg['sentby']
+			self._routingTable[msg['src']][msg['radio']]['time'] = time.time()
 
 	#
 

@@ -39,7 +39,8 @@ class Com(object):
 		self.stop() #can't guarantee this will be called, but this is here jic
 
 	def start(self):
-		self._connL.startPing()
+		self._connL.startPing(1)
+		self._routeL.startAging(5,5)
 
 		self._threadsRunning = True
 		self._readThread.start()
@@ -47,6 +48,7 @@ class Com(object):
 
 	def stop(self):
 		self._connL.stopPing()
+		self._routeL.stopAging()
 
 		self._threadsRunning = False
 		self._readThread.join()
@@ -59,10 +61,8 @@ class Com(object):
 		"""
 		
 		while self._threadsRunning:
-			#only do things if the read handler is set
-			#otherwise we'll assume you will call read
-			if self._readHandler is not None:
-				for msg in self._messageL.read():
+			for msg in self._messageL.read():
+				if None != self._readHandler:
 					self._readHandler(msg)
 
 	def _procWrite(self):
@@ -105,6 +105,8 @@ class Com(object):
 		Non-blocking read
 
 		Returns list of messages as json objects (can return empty list)
+		
+		DEPRECATED: only use if NOT using .start/.stop
 		"""
 		return self._messageL.read()
 
