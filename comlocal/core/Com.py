@@ -40,7 +40,7 @@ class Com(object):
 
 	def start(self):
 		self._connL.startPing(1)
-		self._routeL.startAging(5,5)
+		self._routeL.startAging(3,3)
 
 		self._threadsRunning = True
 		self._readThread.start()
