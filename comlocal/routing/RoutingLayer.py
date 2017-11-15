@@ -58,7 +58,7 @@ class RoutingLayer(object):
 		Use the ping to update the routing table
 		
 		"""
-		pdb.set_trace()
+		#pdb.set_trace()
 		self._updateRoutingTable(msg)
 		#TODO: remove after debugging
 		print self._getRoutes()
@@ -81,6 +81,7 @@ class RoutingLayer(object):
 			self._routingTable[msg['src']][msg['radio']] = msg['sentby']
 		else:
 			self._routingTable[msg['src']] = {}
+			self._routingTable[msg['src']][msg['radio']] = msg['sentby']
 		#
 
 	def _needsForward(self, msg):
