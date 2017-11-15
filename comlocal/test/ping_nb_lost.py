@@ -19,6 +19,7 @@ def start():
 	print time.time()
 
 def main():
+	random.seed()
 	threading.Timer(random.randint(0,15), start).start()
 #
 
