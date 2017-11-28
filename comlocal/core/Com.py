@@ -85,7 +85,7 @@ class Com(object):
 		
 		TODO: Read radio list from config file
 		"""
-		return [WiFi.WiFi()]
+		return [WiFi.WiFi(), Bluetooth.Bluetooth()]
 
 	def setID(self, uniqueID):
 		"""

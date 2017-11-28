@@ -19,12 +19,15 @@ class Bluetooth (Radio.Radio):
 		super(Bluetooth, self).__init__(self._setupProperties())
 		self._name = 'BT'
 		self._port = 0x2807
-		self._sock=bluetooth.BluetoothSocket(bluetooth.L2CAP)
+		self._sock = bluetooth.BluetoothSocket(bluetooth.L2CAP)
 
 		self._sock.settimeout(.05)
 		self._sock.bind(("", self._port))
 		self._sock.listen(1)
-		
+	#
+
+	def __del__(self):
+		self._sock.close()
 
 	def _setupProperties(self):
 		"""
