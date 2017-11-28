@@ -1,5 +1,5 @@
 
-from comlocal.radio import WiFi
+from comlocal.radio import WiFi, Bluetooth
 from comlocal.connection import ConnectionLayer
 from comlocal.routing import RoutingLayer
 from comlocal.util import CommonData
