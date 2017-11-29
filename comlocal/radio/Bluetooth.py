@@ -6,6 +6,8 @@ import bluetooth._bluetooth as _bt
 import struct
 import socket
 import errno
+import threading
+import Queue
 import pdb
 
 
@@ -18,16 +20,27 @@ class Bluetooth (Radio.Radio):
 	def __init__ (self):
 		super(Bluetooth, self).__init__(self._setupProperties())
 		self._name = 'BT'
-		self._port = 0x2807
+		self._port = 0x2807 #10247
 		self._sock = bluetooth.BluetoothSocket(bluetooth.L2CAP)
 
-		self._sock.settimeout(.05)
 		self._sock.bind(("", self._port))
-		self._sock.listen(1)
+		self._sock.listen(5) #allow multiple connections
+
+		self._readQ = Queue.Queue()
+		
 	#
 
 	def __del__(self):
 		self._sock.close()
+
+	def start(self):
+		self._threadRunning = True
+		self._readThread = threading.Thread(target=self._backgroundRead)
+
+	def stop(self):
+		self._threadRunning = False
+		self._readThread.join()
+
 
 	def _setupProperties(self):
 		"""
@@ -68,28 +81,35 @@ class Bluetooth (Radio.Radio):
 		hci_sock.setsockopt( _bt.SOL_HCI, _bt.HCI_FILTER, old_filter )
 		return bdaddr
 
+	def _backgroundRead(self):
+		while self._threadRunning:
+			client_sock = None
+			try:
+				client_sock,address = self._sock.accept()
+				data = client_sock.recv(self.getProperties().maxPacketLength)
+				tmp = json.loads(data)
+				tmp['sentby'] = address[0] #want the address
+
+				self._readQ.put(tmp)
+			finally:
+				if client_sock is not None:
+					client_sock.close()
+		#
+	#
+
 	def read(self):
 		"""
 		Read from radio and return json object
 
 		Non blocking
 		"""
-		client_sock = None
-
-		try:
-			client_sock,address = self._sock.accept()
-			data = client_sock.recv(self.getProperties().maxPacketLength)
-			tmp = json.loads(data)
-			tmp['sentby'] = address[0] #want the address
-		except bluetooth.btcommon.BluetoothError as e:
-			if 'timed out' in e:
-				data = '{}'
-				tmp = json.loads(data)
-		finally:
-			if client_sock is not None:
-				client_sock.close()
 		
-		return tmp
+		try:
+			data = self._readQ.get_nowait()
+		except Empty:
+			data = {}
+
+		return data
 	#
 
 	def write(self, data):

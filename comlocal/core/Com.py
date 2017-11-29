@@ -39,7 +39,7 @@ class Com(object):
 		self.stop() #can't guarantee this will be called, but this is here jic
 
 	def start(self):
-		self._connL.startPing(1)
+		self._connL.start(1)
 		self._routeL.startAging(3,3)
 
 		self._threadsRunning = True
@@ -47,7 +47,7 @@ class Com(object):
 		self._writeThread.start()
 
 	def stop(self):
-		self._connL.stopPing()
+		self._connL.stop()
 		self._routeL.stopAging()
 
 		self._threadsRunning = False

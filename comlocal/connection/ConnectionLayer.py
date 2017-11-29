@@ -43,16 +43,20 @@ class ConnectionLayer(object):
 		pass
 	#
 
-	def startPing(self, delay):
+	def start(self, delay):
 		"""
 		Start sending out a ping to let other devices know
 		we're here. Delay, in seconds, between pings set by delay (float possible)
 		"""
+		for radio in self._radioList:
+			radio.start()
 		self._pingDelay = delay
 		self._runPing = True
 		self._ping() #start pinging
 
 	def stopPing(self):
+		for radio in self._radioList:
+			radio.stop()
 		self._runPing = False
 
 	def _ping(self):
