@@ -90,7 +90,7 @@ class Bluetooth (Radio.Radio):
 				data = client_sock.recv(self.getProperties().maxPacketLength)
 				tmp = json.loads(data)
 				tmp['sentby'] = address[0] #want the address
-
+				pdb.set_trace()
 				self._readQ.put(tmp)
 			finally:
 				if client_sock is not None:
@@ -121,12 +121,14 @@ class Bluetooth (Radio.Radio):
 		#discover devices
 		#bluetooth.set_packet_timeout( bdaddr, timeout)
 		#connect and send to everyone!
-		nearbyDevices = bluetooth.discover_devices(duration=2)
+		pdb.set_trace()
+		nearbyDevices = bluetooth.discover_devices(duration=10)
 
 		try:
 			for addr in nearbyDevices:
-				self._sock.connect((addr, self._port))
-				self._sock.send(json.dumps(data))		
+				sock = bluetooth.BluetoothSocket(bluetooth.L2CAP)
+				sock.connect((addr, self._port))
+				sock.send(json.dumps(data))		
 		except Exception as e:
 			raise e
 		#
