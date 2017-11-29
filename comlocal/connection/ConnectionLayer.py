@@ -54,7 +54,7 @@ class ConnectionLayer(object):
 		self._runPing = True
 		self._ping() #start pinging
 
-	def stopPing(self):
+	def stop(self):
 		for radio in self._radioList:
 			radio.stop()
 		self._runPing = False

@@ -106,7 +106,7 @@ class Bluetooth (Radio.Radio):
 		
 		try:
 			data = self._readQ.get_nowait()
-		except Empty:
+		except Queue.Empty:
 			data = {}
 
 		return data
