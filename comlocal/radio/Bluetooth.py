@@ -27,6 +27,7 @@ class Bluetooth (Radio.Radio):
 		self._sock.listen(5) #allow multiple connections
 
 		self._readQ = Queue.Queue()
+		self._readThread = threading.Thread(target=self._backgroundRead)
 		
 	#
 
@@ -35,7 +36,7 @@ class Bluetooth (Radio.Radio):
 
 	def start(self):
 		self._threadRunning = True
-		self._readThread = threading.Thread(target=self._backgroundRead)
+		self._readThread.start()
 
 	def stop(self):
 		self._threadRunning = False
