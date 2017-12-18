@@ -112,7 +112,8 @@ class ConnectionLayer(object):
 			except KeyError:
 				pass
 
-			None if not msg else data.append(self._addRadioField(msg, radio._name))
+			if msg is not None:
+				data.append(self._addRadioField(msg, radio._name))
 		#
 
 		return data
@@ -137,7 +138,9 @@ class ConnectionLayer(object):
 		try:
 			with self._radioLock:
 				for radio in filter(lambda x: x._name in msg['radios'], self._radioList):
-					radio.write(msg)
+					if radio.getProperties().maxPacketLength >= len(msg):
+						radio.write(msg)
+					#
 				#
 			#
 			return True

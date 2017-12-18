@@ -48,7 +48,7 @@ class RoutingLayer(object):
 		#return the rest of the messages because these are local
 		return filter(lambda x: x not in r, messages)
 
-	def startAging(self, delay, maxAge):
+	def start(self, delay, maxAge):
 		"""
 		Start aging the route table where entries older than maxAge
 		are removed. Delay, in seconds, between checks set by delay
@@ -60,7 +60,7 @@ class RoutingLayer(object):
 		self._ageTable()
 	#
 
-	def stopAging(self):
+	def stop(self):
 		self._runAging = False
 
 

@@ -7,7 +7,19 @@ import struct
 import socket
 import errno
 import threading
-import Queue
+import subprocess
+import os
+from ctypes import (CDLL, get_errno)
+from ctypes.util import find_library
+from socket import (
+    socket,
+    AF_BLUETOOTH,
+    SOCK_RAW,
+    BTPROTO_HCI,
+    SOL_HCI,
+    HCI_FILTER,
+)
+
 import pdb
 
 
@@ -20,14 +32,44 @@ class Bluetooth (Radio.Radio):
 	def __init__ (self):
 		super(Bluetooth, self).__init__(self._setupProperties())
 		self._name = 'BT'
-		self._port = 0x2807 #10247
-		self._sock = bluetooth.BluetoothSocket(bluetooth.L2CAP)
 
-		self._sock.bind(("", self._port))
-		self._sock.listen(5) #allow multiple connections
+		btlib = find_library("bluetooth")
+		if not btlib:
+			raise Exception(
+			    "Can't find required bluetooth libraries"
+			    " (need to install bluez)"
+			)
+		bluez = CDLL(btlib, use_errno=True)
 
-		self._readQ = Queue.Queue()
-		self._readThread = threading.Thread(target=self._backgroundRead)
+		dev_id = bluez.hci_get_route(None)
+
+		sock = socket(AF_BLUETOOTH, SOCK_RAW, BTPROTO_HCI)
+		sock.bind((dev_id,))
+
+		err = bluez.hci_le_set_scan_parameters(sock.fileno(), 0, 0x10, 0x10, 0, 0, 1000);
+		if err < 0:
+			raise Exception("Set scan parameters failed")
+			# occurs when scanning is still enabled from previous call
+
+		# allows LE advertising events
+		hci_filter = struct.pack(
+		    "<IQH", 
+		    0x00000010, 
+		    0x4000000000000000, 
+		    0
+		)
+		sock.setsockopt(SOL_HCI, HCI_FILTER, hci_filter)
+
+
+		# self._port = 0x2807 #10247
+		# self._sock = bluetooth.BluetoothSocket(bluetooth.L2CAP)
+
+		# self._sock.settimeout(.05)
+		# self._sock.bind(("", self._port))
+		# self._sock.listen(5) #allow multiple connections
+
+		# self._readQ = Queue.Queue()
+		# self._readThread = threading.Thread(target=self._backgroundRead)
 		
 	#
 
@@ -35,12 +77,30 @@ class Bluetooth (Radio.Radio):
 		self._sock.close()
 
 	def start(self):
-		self._threadRunning = True
-		self._readThread.start()
+		# self._threadRunning = True
+		# self._readThread.start()
+		err = bluez.hci_le_set_scan_enable(
+		    sock.fileno(),
+		    1,  # 1 - turn on;  0 - turn off
+		    0, # 0-filtering disabled, 1-filter out duplicates
+		    1000  # timeout
+		)
+		if err < 0:
+			errnum = get_errno()
+			raise Exception("{} {}".format(
+			    errno.errorcode[errnum],
+			    os.strerror(errnum)
+			))
 
 	def stop(self):
-		self._threadRunning = False
-		self._readThread.join()
+		# self._threadRunning = False
+		# self._readThread.join()
+		bluez.hci_le_set_scan_enable(
+		    sock.fileno(),
+		    0,  # 1 - turn on;  0 - turn off
+		    0, # 0-filtering disabled, 1-filter out duplicates
+		    1000  # timeout
+		)
 
 
 	def _setupProperties(self):
@@ -49,7 +109,7 @@ class Bluetooth (Radio.Radio):
 		"""
 		props = Properties.Properties()
 		props.addr = self._getAddress()
-		props.maxPacketLength = 1024
+		props.maxPacketLength = 72
 		props.costPerByte = 1
 
 		return props
@@ -82,21 +142,25 @@ class Bluetooth (Radio.Radio):
 		hci_sock.setsockopt( _bt.SOL_HCI, _bt.HCI_FILTER, old_filter )
 		return bdaddr
 
-	def _backgroundRead(self):
-		while self._threadRunning:
-			client_sock = None
-			try:
-				client_sock,address = self._sock.accept()
-				data = client_sock.recv(self.getProperties().maxPacketLength)
-				tmp = json.loads(data)
-				tmp['sentby'] = address[0] #want the address
-				pdb.set_trace()
-				self._readQ.put(tmp)
-			finally:
-				if client_sock is not None:
-					client_sock.close()
-		#
-	#
+	# def _backgroundRead(self):
+	# 	while self._threadRunning:
+	# 		client_sock = None
+	# 		try:
+	# 			#TODO: FIX THIS!!! THIS IS BLOCKING SO WE CAN NEVER END THIS SHIT
+	# 			client_sock,address = self._sock.accept()
+	# 			data = client_sock.recv(self.getProperties().maxPacketLength)
+	# 			tmp = json.loads(data)
+	# 			tmp['sentby'] = address[0] #want the address
+	# 			pdb.set_trace()
+	# 			self._readQ.put(tmp)
+	# 		except bluetooth.btcommon.BluetoothError as e:
+	# 			if 'timed out' not in e:
+	# 				raise e
+	# 		finally:
+	# 			if client_sock is not None:
+	# 				client_sock.close()
+	# 	#
+	# #
 
 	def read(self):
 		"""
@@ -104,13 +168,19 @@ class Bluetooth (Radio.Radio):
 
 		Non blocking
 		"""
-		
+		msg = {}
 		try:
-			data = self._readQ.get_nowait()
-		except Queue.Empty:
-			data = {}
+			data = sock.recv(1024)
+			# print bluetooth address from LE Advert. packet
+			msg = json.loads(''.join(x for x in data[20:-1]))
+			addr = ':'.join("{0:02x}".format(ord(x)) for x in data[12:6:-1])
+			msg['sentby'] = addr
 
-		return data
+		except bluetooth.btcommon.BluetoothError as e:
+			if 'timed out' not in e:
+				raise e
+
+		return msg
 	#
 
 	def write(self, data):
@@ -118,17 +188,17 @@ class Bluetooth (Radio.Radio):
 		write json object to radio
 		"""
 
-		#discover devices
-		#bluetooth.set_packet_timeout( bdaddr, timeout)
-		#connect and send to everyone!
-		pdb.set_trace()
-		nearbyDevices = bluetooth.discover_devices(duration=10)
+		payload = ' '.join("{0:02X}".format(ord(x)) for x in data)
+		length =  ''.join("{0:02X}".format(len(payload.split()) + 3))
+		total = ''.join("{0:02X}".format(len(payload.split()) + 7))
 
+		msgCmd = 'hcitool -i hci0 cmd 0x08 0x0008 ' + total + ' 02 01 1A ' + length + ' FF 4C 00 ' + payload
+		onCmd = 'hcitool -i hci0 cmd 0x08 0x000a 01'
+		offCmd = 'hcitool -i hci0 cmd 0x08 0x000a 00'
 		try:
-			for addr in nearbyDevices:
-				sock = bluetooth.BluetoothSocket(bluetooth.L2CAP)
-				sock.connect((addr, self._port))
-				sock.send(json.dumps(data))		
+			subprocess.call(msgCmd, shell=True)
+			subprocess.call(onCmd, shell=True)
+			subprocess.call(offCmd, shell=True)
 		except Exception as e:
 			raise e
 		#

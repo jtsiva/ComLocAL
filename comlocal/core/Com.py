@@ -40,7 +40,7 @@ class Com(object):
 
 	def start(self):
 		self._connL.start(1)
-		self._routeL.startAging(3,3)
+		self._routeL.start(3,3)
 
 		self._threadsRunning = True
 		self._readThread.start()
@@ -48,7 +48,7 @@ class Com(object):
 
 	def stop(self):
 		self._connL.stop()
-		self._routeL.stopAging()
+		self._routeL.stop()
 
 		self._threadsRunning = False
 		self._readThread.join()
