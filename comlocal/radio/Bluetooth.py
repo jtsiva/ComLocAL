@@ -39,14 +39,14 @@ class Bluetooth (Radio.Radio):
 			    "Can't find required bluetooth libraries"
 			    " (need to install bluez)"
 			)
-		bluez = CDLL(btlib, use_errno=True)
+		self._bluez = CDLL(btlib, use_errno=True)
 
-		dev_id = bluez.hci_get_route(None)
+		dev_id = self._bluez.hci_get_route(None)
 
-		sock = socket(AF_BLUETOOTH, SOCK_RAW, BTPROTO_HCI)
-		sock.bind((dev_id,))
+		self._sock = socket(AF_BLUETOOTH, SOCK_RAW, BTPROTO_HCI)
+		self._sock.bind((dev_id,))
 
-		err = bluez.hci_le_set_scan_parameters(sock.fileno(), 0, 0x10, 0x10, 0, 0, 1000);
+		err = self._bluez.hci_le_set_scan_parameters(self._sock.fileno(), 0, 0x10, 0x10, 0, 0, 1000);
 		if err < 0:
 			raise Exception("Set scan parameters failed")
 			# occurs when scanning is still enabled from previous call
@@ -58,7 +58,7 @@ class Bluetooth (Radio.Radio):
 		    0x4000000000000000, 
 		    0
 		)
-		sock.setsockopt(SOL_HCI, HCI_FILTER, hci_filter)
+		self._sock.setsockopt(SOL_HCI, HCI_FILTER, hci_filter)
 
 
 		# self._port = 0x2807 #10247
@@ -79,8 +79,8 @@ class Bluetooth (Radio.Radio):
 	def start(self):
 		# self._threadRunning = True
 		# self._readThread.start()
-		err = bluez.hci_le_set_scan_enable(
-		    sock.fileno(),
+		err = self._bluez.hci_le_set_scan_enable(
+		    self._sock.fileno(),
 		    1,  # 1 - turn on;  0 - turn off
 		    0, # 0-filtering disabled, 1-filter out duplicates
 		    1000  # timeout
@@ -95,8 +95,8 @@ class Bluetooth (Radio.Radio):
 	def stop(self):
 		# self._threadRunning = False
 		# self._readThread.join()
-		bluez.hci_le_set_scan_enable(
-		    sock.fileno(),
+		self._bluez.hci_le_set_scan_enable(
+		    self._sock.fileno(),
 		    0,  # 1 - turn on;  0 - turn off
 		    0, # 0-filtering disabled, 1-filter out duplicates
 		    1000  # timeout
@@ -170,7 +170,7 @@ class Bluetooth (Radio.Radio):
 		"""
 		msg = {}
 		try:
-			data = sock.recv(1024)
+			data = self._sock.recv(1024)
 			# print bluetooth address from LE Advert. packet
 			msg = json.loads(''.join(x for x in data[20:-1]))
 			addr = ':'.join("{0:02x}".format(ord(x)) for x in data[12:6:-1])
@@ -188,7 +188,7 @@ class Bluetooth (Radio.Radio):
 		write json object to radio
 		"""
 
-		payload = ' '.join("{0:02X}".format(ord(x)) for x in data)
+		payload = ' '.join("{0:02X}".format(ord(x)) for x in json.dumps(data))
 		length =  ''.join("{0:02X}".format(len(payload.split()) + 3))
 		total = ''.join("{0:02X}".format(len(payload.split()) + 7))
 

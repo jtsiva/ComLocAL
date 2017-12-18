@@ -6,8 +6,9 @@ import time
 
 def main():
 	com = Com.Com()
+	com.start()
 	try:
-		com.start()
+		
 		time.sleep(30)
 	finally:
 		com.stop()
