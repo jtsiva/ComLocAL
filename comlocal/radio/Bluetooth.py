@@ -171,9 +171,10 @@ class Bluetooth (Radio.Radio):
 		msg = {}
 		try:
 			data = self._sock.recv(1024)
+			print data
 			if 'type' in data:
 				# print bluetooth address from LE Advert. packet
-				msg = json.loads(''.join(x for x in data[20:-1]))
+				msg = json.loads(''.join(x for x in data[21:-1]))
 				addr = ':'.join("{0:02x}".format(ord(x)) for x in data[12:6:-1])
 				msg['sentby'] = addr
 
