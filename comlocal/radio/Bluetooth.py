@@ -171,10 +171,11 @@ class Bluetooth (Radio.Radio):
 		msg = {}
 		try:
 			data = self._sock.recv(1024)
-			# print bluetooth address from LE Advert. packet
-			msg = json.loads(''.join(x for x in data[20:-1]))
-			addr = ':'.join("{0:02x}".format(ord(x)) for x in data[12:6:-1])
-			msg['sentby'] = addr
+			if 'type' in data:
+				# print bluetooth address from LE Advert. packet
+				msg = json.loads(''.join(x for x in data[20:-1]))
+				addr = ':'.join("{0:02x}".format(ord(x)) for x in data[12:6:-1])
+				msg['sentby'] = addr
 
 		except bluetooth.btcommon.BluetoothError as e:
 			if 'timed out' not in e:
@@ -187,6 +188,7 @@ class Bluetooth (Radio.Radio):
 		"""
 		write json object to radio
 		"""
+		FNULL = open(os.devnull, 'w')
 
 		payload = ' '.join("{0:02X}".format(ord(x)) for x in json.dumps(data))
 		length =  ''.join("{0:02X}".format(len(payload.split()) + 3))
@@ -196,9 +198,9 @@ class Bluetooth (Radio.Radio):
 		onCmd = 'hcitool -i hci0 cmd 0x08 0x000a 01'
 		offCmd = 'hcitool -i hci0 cmd 0x08 0x000a 00'
 		try:
-			subprocess.call(msgCmd, shell=True)
-			subprocess.call(onCmd, shell=True)
-			subprocess.call(offCmd, shell=True)
+			subprocess.call(msgCmd, shell=True, stdout=FNULL, stderr=subprocess.STDOUT)
+			subprocess.call(onCmd, shell=True, stdout=FNULL, stderr=subprocess.STDOUT)
+			subprocess.call(offCmd, shell=True, stdout=FNULL, stderr=subprocess.STDOUT)
 		except Exception as e:
 			raise e
 		#
