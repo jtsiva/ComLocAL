@@ -62,6 +62,9 @@ class RoutingLayer(object):
 
 	def stop(self):
 		self._runAging = False
+		if self._commonData['logging']['inUse']:
+			#print summary information for this layer
+			pass
 
 
 	def _ageTable(self):

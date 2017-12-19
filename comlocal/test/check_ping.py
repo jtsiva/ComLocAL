@@ -5,7 +5,7 @@ import time
 
 
 def main():
-	com = Com.Com()
+	com = Com.Com(log=True)
 	com.start()
 	try:
 		
