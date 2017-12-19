@@ -81,6 +81,9 @@ class RoutingLayer(object):
 				# if {} == self._routingTable[ID]:
 				# 	del self._routingTable[ID]
 
+		#TODO: remove after debugging?
+		print self._getRoutes()
+
 		if self._runAging:
 			#reschedule for later only if runAging is true
 			threading.Timer(self._agingDelay, self._ageTable).start()
@@ -102,8 +105,7 @@ class RoutingLayer(object):
 		"""
 		#pdb.set_trace()
 		self._updateRoutingTable(msg)
-		#TODO: remove after debugging
-		print self._getRoutes()
+
 		return msg
 
 	def _isPing(self, msg):
