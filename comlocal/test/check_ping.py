@@ -3,14 +3,12 @@
 from comlocal.core import Com
 import time
 
-def nope(msg):
-	pass
 
 def main():
 	com = Com.Com()
-	com.setReadHandler(nope)
+	com.start()
 	try:
-		com.start()
+		
 		time.sleep(30)
 	finally:
 		com.stop()

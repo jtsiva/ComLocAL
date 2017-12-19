@@ -48,7 +48,7 @@ class RoutingLayer(object):
 		#return the rest of the messages because these are local
 		return filter(lambda x: x not in r, messages)
 
-	def startAging(self, delay, maxAge):
+	def start(self, delay, maxAge):
 		"""
 		Start aging the route table where entries older than maxAge
 		are removed. Delay, in seconds, between checks set by delay
@@ -60,7 +60,7 @@ class RoutingLayer(object):
 		self._ageTable()
 	#
 
-	def stopAging(self):
+	def stop(self):
 		self._runAging = False
 
 
@@ -80,6 +80,9 @@ class RoutingLayer(object):
 				#TODO: decide if we want to to completely remove entry
 				# if {} == self._routingTable[ID]:
 				# 	del self._routingTable[ID]
+
+		#TODO: remove after debugging?
+		print self._getRoutes()
 
 		if self._runAging:
 			#reschedule for later only if runAging is true
@@ -102,8 +105,7 @@ class RoutingLayer(object):
 		"""
 		#pdb.set_trace()
 		self._updateRoutingTable(msg)
-		#TODO: remove after debugging
-		print self._getRoutes()
+
 		return msg
 
 	def _isPing(self, msg):

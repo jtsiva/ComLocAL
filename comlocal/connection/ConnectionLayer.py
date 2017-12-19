@@ -43,16 +43,20 @@ class ConnectionLayer(object):
 		pass
 	#
 
-	def startPing(self, delay):
+	def start(self, delay):
 		"""
 		Start sending out a ping to let other devices know
 		we're here. Delay, in seconds, between pings set by delay (float possible)
 		"""
+		for radio in self._radioList:
+			radio.start()
 		self._pingDelay = delay
 		self._runPing = True
 		self._ping() #start pinging
 
-	def stopPing(self):
+	def stop(self):
+		for radio in self._radioList:
+			radio.stop()
 		self._runPing = False
 
 	def _ping(self):
@@ -108,7 +112,8 @@ class ConnectionLayer(object):
 			except KeyError:
 				pass
 
-			None if not msg else data.append(self._addRadioField(msg, radio._name))
+			if msg is not None:
+				data.append(self._addRadioField(msg, radio._name))
 		#
 
 		return data
@@ -133,7 +138,9 @@ class ConnectionLayer(object):
 		try:
 			with self._radioLock:
 				for radio in filter(lambda x: x._name in msg['radios'], self._radioList):
-					radio.write(msg)
+					if radio.getProperties().maxPacketLength >= len(msg):
+						radio.write(msg)
+					#
 				#
 			#
 			return True

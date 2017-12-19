@@ -1,5 +1,5 @@
 
-from comlocal.radio import WiFi
+from comlocal.radio import WiFi, Bluetooth
 from comlocal.connection import ConnectionLayer
 from comlocal.routing import RoutingLayer
 from comlocal.util import CommonData
@@ -39,16 +39,16 @@ class Com(object):
 		self.stop() #can't guarantee this will be called, but this is here jic
 
 	def start(self):
-		self._connL.startPing(1)
-		self._routeL.startAging(3,3)
+		self._connL.start(1)
+		self._routeL.start(3,3)
 
 		self._threadsRunning = True
 		self._readThread.start()
 		self._writeThread.start()
 
 	def stop(self):
-		self._connL.stopPing()
-		self._routeL.stopAging()
+		self._connL.stop()
+		self._routeL.stop()
 
 		self._threadsRunning = False
 		self._readThread.join()
@@ -62,7 +62,7 @@ class Com(object):
 		
 		while self._threadsRunning:
 			for msg in self._messageL.read():
-				if None != self._readHandler:
+				if self._readHandler is not None:
 					self._readHandler(msg)
 
 	def _procWrite(self):
@@ -85,7 +85,7 @@ class Com(object):
 		
 		TODO: Read radio list from config file
 		"""
-		return [WiFi.WiFi()]
+		return [WiFi.WiFi(), Bluetooth.Bluetooth()]
 
 	def setID(self, uniqueID):
 		"""

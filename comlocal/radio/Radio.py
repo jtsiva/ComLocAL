@@ -13,6 +13,14 @@ class Radio(object):
 		self._name = 'NULL'
 		self._props = props
 
+	def start(self):
+		#for starting connection oriented radios
+		pass
+
+	def stop(self):
+		#for stopping connection oriented radios
+		pass
+
 	def read(self):
 		"""
 		Read from radio and return json object
