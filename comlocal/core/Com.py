@@ -9,7 +9,7 @@ import Queue
 import threading
 
 class Com(object):
-	def __init__(self):
+	def __init__(self, logging = False):
 		self._commonData = self._initCommonData(CommonData.CommonData())
 		self._connL = ConnectionLayer.ConnectionLayer(self._commonData, self._getRadios())
 		self._routeL = RoutingLayer.RoutingLayer(self._commonData)
