@@ -1,36 +1,22 @@
 
-from util import Properties
+from comlocal.util import Properties
 import Radio
 import socket
-import struct
 import fcntl
-import sys
-import subprocess
+import struct
+import json
 
 class WiFi (Radio.Radio):
 	"""
-	Facilitates / abstracts all communication over WiFi
-	All communication is multicast UDP. The address within the packet
-	is used to determine intended destination
-
-	multicast addr: 224.0.0.0 - 239.255.255.255
-	broadcast addr: 255.255.255.255
-
-	multicast for infrastructure
-	'broadcast' for ad hoc (each device addr based on unique UAV ID)
-
-	multicast based on:
-	https://pymotw.com/2/socket/multicast.html
-
 	UPDATE (10-10-17): all ad-hoc mode communication
 		need to scan for other devices in range
-		can both unicast and broadcast since there is no need to
-		broadcast if the destination is a 1-hop neighbor
+		
+	UPDATE (11-9-17): only UDP broadcast implemented
 
 	"""
 	def __init__ (self):
-		self._name = 'WiFi'
 		super(WiFi, self).__init__(self._setupProperties())
+		self._name = 'WiFi'
 
 		self._port = 10247
 		self._rSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -40,6 +26,10 @@ class WiFi (Radio.Radio):
 		self._wSock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 		self._rSock.settimeout(.05)
 		self._rSock.bind(('0.0.0.0', self._port))
+
+		t = self.getProperties().addr.split('.')
+		t[-1] = '255'
+		self._broadcastAddr = ('.'.join(t), self._port)
 	#
 
 	def __del__(self):
@@ -57,38 +47,40 @@ class WiFi (Radio.Radio):
 			#my laptop has a different form
 			props.addr = self._get_ip_address('wlp1s0')
 
-		props.maxPacketLength = 512
+		props.maxPacketLength = 4096
 		props.costPerByte = 1
 
 		return props
 
-	def read(self, n):
+	def read(self):
 		"""
-		Read n bytes
+		Read from radio and return json object
 
-		return n bytes or whatever is available to read (which is smaller)
+		Non blocking
 		"""
+
 		try:
-			data, server = self._rSock.recvfrom(n)
+			data, address = self._rSock.recvfrom(self.getProperties().maxPacketLength)
+			tmp = json.loads(data)
+			tmp['sentby'] = address[0] #want the ip address
 		except socket.timeout:
-			data = []
+			data = '{}'
+			tmp = json.loads(data)
+		
+		return tmp
+	#
 
-		return data
-
-	def write(self, dest, data):
+	def write(self, data):
 		"""
-		Write data bytes. Dest is expected to be a 4 byte list
-
-		return number of bytes written
+		write json object to radio
 		"""
-		fDest = ''
-		for e in dest:
-			fDest += str(e) + '.'
 
-		fDest = fDest[:-1]
-		sent = self._wSock.sendto(data, (fDest, self._port))
-
-		return sent
+		try:
+			res = self._wSock.sendto(json.dumps(data), self._broadcastAddr)
+		except Exception as e:
+			raise e
+		#
+	#
 
 	def _get_ip_address(self, ifname):
 		"""
@@ -102,25 +94,9 @@ class WiFi (Radio.Radio):
 			struct.pack('256s', ifname[:15])
 		)[20:24])
 
-	def scan(self):
-		"""
-		Get list of IP addresses for 1 hop neighbors
-		Can discover all 1-hop neighbors by using nmap
-
-		Return list if successful, empty list otherwise
-		TODO: define exception to be thrown to differentiate between failure
-		and no neighbors (10/18/17)
-		"""
-		try:
-			addrToSearch = self.getProperties().addr[:7] + '0/24'
-			output = subprocess.check_output("nmap -n -sn " + addrToSearch + " -oG - | awk '/Up$/{print $2}'", shell=True)
-			neighbors = output.split()
-		except subprocess.CalledProcessError:
-			neighbors = []
-
-		#TODO: remove self from nb, use to detect fail?
-
-		return neighbors
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#                   ---deal with this later---
+#                   V                        V
 
 	def range(self):
 		"""
