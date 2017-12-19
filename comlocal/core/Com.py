@@ -62,7 +62,7 @@ class Com(object):
 		
 		while self._threadsRunning:
 			for msg in self._messageL.read():
-				if None != self._readHandler:
+				if self._readHandler is not None:
 					self._readHandler(msg)
 
 	def _procWrite(self):

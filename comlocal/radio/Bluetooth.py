@@ -12,6 +12,7 @@ import os
 from ctypes import (CDLL, get_errno)
 from ctypes.util import find_library
 from socket import (
+	timeout,
     socket,
     AF_BLUETOOTH,
     SOCK_RAW,
@@ -59,7 +60,7 @@ class Bluetooth (Radio.Radio):
 		    0
 		)
 		self._sock.setsockopt(SOL_HCI, HCI_FILTER, hci_filter)
-
+		self._sock.settimeout(.05)
 
 		# self._port = 0x2807 #10247
 		# self._sock = bluetooth.BluetoothSocket(bluetooth.L2CAP)
@@ -176,10 +177,8 @@ class Bluetooth (Radio.Radio):
 				msg = json.loads(''.join(x for x in data[21:-1]))
 				addr = ':'.join("{0:02x}".format(ord(x)) for x in data[12:6:-1])
 				msg['sentby'] = addr
-
-		except bluetooth.btcommon.BluetoothError as e:
-			if 'timed out' not in e:
-				raise e
+		except timeout:
+			pass
 
 		return msg
 	#
