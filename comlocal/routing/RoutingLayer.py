@@ -54,6 +54,8 @@ class RoutingLayer(object):
 		are removed. Delay, in seconds, between checks set by delay
 		(float possible)
 		"""
+		if self._commonData['logging']['inUse']:
+			self._commonData['logging']['routing'] = {'pingsRcv' : 0, 'msgSnt': 0, 'msgRcv' : 0, 'cmdRcv' : 0, 'entriesDel' : 0, 'entrieAdd' : 0, 'fwd': 0}
 		self._agingDelay = delay
 		self._maxAge = maxAge
 		self._runAging = True
@@ -79,6 +81,8 @@ class RoutingLayer(object):
 		with self._tableLock:
 			for ID, radio in toDelete.iteritems():
 				del self._routingTable[ID][radio]
+				if self._commonData['logging']['inUse']:
+					self._commonData['logging']['routing']['entriesDel'] += 1
 
 				#TODO: decide if we want to to completely remove entry
 				# if {} == self._routingTable[ID]:
@@ -130,6 +134,8 @@ class RoutingLayer(object):
 
 			if not (msg['radio'] in self._routingTable[msg['src']]):
 				self._routingTable[msg['src']][msg['radio']] = {}
+				if self._commonData['logging']['inUse']:
+					self._commonData['logging']['routing']['entriesAdd'] += 1
 
 			self._routingTable[msg['src']][msg['radio']]['addr'] = msg['sentby']
 			self._routingTable[msg['src']][msg['radio']]['time'] = time.time()
@@ -146,6 +152,8 @@ class RoutingLayer(object):
 			return False
 
 	def _handleForward(self, msg):
+		if self._commonData['logging']['inUse']:
+			self._commonData['logging']['routing']['fwd'] += 1
 		self.write(msg)
 		return msg
 
