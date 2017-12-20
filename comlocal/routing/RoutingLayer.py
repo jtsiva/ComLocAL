@@ -68,7 +68,7 @@ class RoutingLayer(object):
 	def stop(self):
 		self._runAging = False
 		if self._commonData['logging']['inUse']:
-			loggin.info("RoutingLayer Summary: pingsRcv - %d, msgSnt - %d, msgRcv - %d, cmdRcv - %d, entriesDel - %d, entriesAdd - %d, fwd - %d",
+			logging.info("RoutingLayer Summary: pingsRcv - %d, msgSnt - %d, msgRcv - %d, cmdRcv - %d, entriesDel - %d, entriesAdd - %d, fwd - %d",
 				self._commonData['logging']['routing']['pingsRcv'],\
 				self._commonData['logging']['routing']['msgSnt'],\
 				self._commonData['logging']['routing']['msgRcv'],\
