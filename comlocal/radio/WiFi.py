@@ -64,8 +64,7 @@ class WiFi (Radio.Radio):
 			tmp = json.loads(data)
 			tmp['sentby'] = address[0] #want the ip address
 		except socket.timeout:
-			data = '{}'
-			tmp = json.loads(data)
+			tmp = None
 		
 		return tmp
 	#

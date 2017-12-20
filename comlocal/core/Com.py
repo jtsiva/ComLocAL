@@ -43,7 +43,7 @@ class Com(object):
 	#
 
 	def __del__(self):
-		self.stop() #can't guarantee this will be called, but this is here jic
+		pass#self.stop() #can't guarantee this will be called, but this is here jic
 
 	def start(self):
 		self._connL.start(1)

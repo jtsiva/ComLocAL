@@ -169,7 +169,7 @@ class Bluetooth (Radio.Radio):
 
 		Non blocking
 		"""
-		msg = {}
+		msg = None
 		try:
 			data = self._sock.recv(1024)
 			if 'type' in data:
