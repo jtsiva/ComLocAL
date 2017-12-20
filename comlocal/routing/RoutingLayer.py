@@ -55,7 +55,7 @@ class RoutingLayer(object):
 		(float possible)
 		"""
 		if self._commonData['logging']['inUse']:
-			self._commonData['logging']['routing'] = {'pingsRcv' : 0, 'msgSnt': 0, 'msgRcv' : 0, 'cmdRcv' : 0, 'entriesDel' : 0, 'entrieAdd' : 0, 'fwd': 0}
+			self._commonData['logging']['routing'] = {'pingsRcv' : 0, 'msgSnt': 0, 'msgRcv' : 0, 'cmdRcv' : 0, 'entriesDel' : 0, 'entriesAdd' : 0, 'fwd': 0}
 		self._agingDelay = delay
 		self._maxAge = maxAge
 		self._runAging = True
