@@ -63,7 +63,7 @@ class ConnectionLayer(object):
 			radio.stop()
 		self._runPing = False
 		if self._commonData['logging']['inUse']:
-			logging.info('ConnectionLayer Summary: pings %d, sent %d, received %d', \
+			logging.info('ConnectionLayer Summary: pingsSnt %d, sent %d, received %d', \
 				self._commonData['logging']['connection']['pings'],\
 				self._commonData['logging']['connection']['sent'],\
 				self._commonData['logging']['connection']['received'])

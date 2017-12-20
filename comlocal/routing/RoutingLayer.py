@@ -98,8 +98,8 @@ class RoutingLayer(object):
 				# if {} == self._routingTable[ID]:
 				# 	del self._routingTable[ID]
 
-		#TODO: remove after debugging?
-		print self._getRoutes()
+		if self._commonData['logging']['inUse']:
+			logging.info('routing:' + self._getRoutes())
 
 		if self._runAging:
 			#reschedule for later only if runAging is true

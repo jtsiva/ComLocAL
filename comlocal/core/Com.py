@@ -8,16 +8,17 @@ import random
 import Queue
 import threading
 import logging
+import json
 
 class Com(object):
-	def __init__(self, log = False, logFile = 'com.log'):
+	def __init__(self, log = False, logFile = 'com.log', configFile = None):
 
 		if log:
-			logging.basicConfig(filename=logFile, level=logging.INFO, format='%(asctime)s %(message)s', datefmt='%I:%M:%S %p')
+			logging.basicConfig(filename=logFile, filemode='w', level=logging.INFO, format='%(asctime)s %(message)s', datefmt='%I:%M:%S %p')
 
 
 		self._commonData = {}
-		self._initCommonData(log)
+		self._initCommonData(log, configFile)
 
 		self._connL = ConnectionLayer.ConnectionLayer(self._commonData, self._getRadios())
 		self._routeL = RoutingLayer.RoutingLayer(self._commonData)
@@ -80,16 +81,20 @@ class Com(object):
 		while self._threadsRunning:
 			pass
 
-	def _initCommonData(self, log):
+	def _initCommonData(self, log, configFile):
 		"""
 		Init the common data by, say, reading from a file
-
-		TODO: read beginning config from file
 		"""
-		self._commonData['id'] = random.randrange(255)
-		self._commonData['location'] = (0,0,0)
-		self._commonData['activeRadios'] = []
-		self._commonData['logging'] = {} if not log else {'inUse': True}
+		if configFile is not None:
+			with open(configFile, 'r') as f:
+				self._commonData = json.loads(f.read())
+		else:
+			self._commonData['id'] = random.randrange(255)
+			self._commonData['location'] = [0,0,0]
+			self._commonData['startRadios'] = ['WiFi', 'BT']
+			self._commonData['activeRadios'] = []
+
+		self._commonData['logging'] = {'inUse': False} if not log else {'inUse': True}
 	#
 
 
@@ -99,7 +104,15 @@ class Com(object):
 		
 		TODO: Read radio list from config file
 		"""
-		return [WiFi.WiFi(), Bluetooth.Bluetooth()]
+		radios = []
+		if 'WiFi' in self._commonData['startRadios']:
+			radios.append(WiFi.WiFi())
+		
+		if 'BT' in self._commonData['startRadios']:
+			radios.append(Bluetooth.Bluetooth())
+		#
+		
+		return radios
 
 	def setID(self, uniqueID):
 		"""

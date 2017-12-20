@@ -5,7 +5,7 @@ import time
 
 
 def main():
-	com = Com.Com(log=True)
+	com = Com.Com(log=True, configFile='default.conf')
 	com.start()
 	try:
 		
