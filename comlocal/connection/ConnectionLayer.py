@@ -123,12 +123,12 @@ class ConnectionLayer(object):
 
 		for radio in self._radioList:
 			msg = radio.read()
-			try:
-				msg = msg if msg['sentby'] != radio.getProperties().addr else None
-			except KeyError:
-				pass
-
 			if msg is not None:
+				try:
+					msg = msg if msg['sentby'] != radio.getProperties().addr else None
+				except KeyError:
+					pass
+			
 				if self._commonData['logging']['inUse']:
 					self._commonData['logging']['connection']['received'] += 1
 				data.append(self._addRadioField(msg, radio._name))
