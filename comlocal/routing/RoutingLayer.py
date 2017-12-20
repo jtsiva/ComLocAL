@@ -3,6 +3,7 @@ import json
 import time
 import threading
 from multiprocessing import Lock
+import logging
 import pdb
 
 class Stats(object):
