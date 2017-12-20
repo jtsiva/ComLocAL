@@ -30,12 +30,12 @@ def main():
 		#	
 		elif args.role == 'forwarder':
 			com.start()
-			time.sleep(90)
+			time.sleep(360)
 
 		elif args.role == 'listener':
 			com.setReadHandler(readHandler)
 			com.start()
-			time.sleep(90)
+			time.sleep(360)
 			
 	finally:
 		com.stop()
