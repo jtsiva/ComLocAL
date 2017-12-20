@@ -93,7 +93,8 @@ class Com(object):
 			self._commonData['location'] = [0,0,0]
 			self._commonData['startRadios'] = ['WiFi', 'BT']
 			self._commonData['activeRadios'] = []
-			self._commonData['logging'] = {} if not log else {'inUse': True}
+
+		self._commonData['logging'] = {'inUse': False} if not log else {'inUse': True}
 	#
 
 
