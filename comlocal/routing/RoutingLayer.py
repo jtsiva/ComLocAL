@@ -160,7 +160,7 @@ class RoutingLayer(object):
 		Check if the message is intended for this node or not
 		"""
 		try:
-			return msg['dest'] != self._commonData.id and msg['src'] != self._commonData.id
+			return msg['dest'] != self._commonData['id'] and msg['src'] != self._commonData['id']
 		except KeyError:
 			return False
 
@@ -176,8 +176,8 @@ class RoutingLayer(object):
 		
 		TODO: add actual routing algorithms here
 		"""
-		msg['src'] = self._commonData.id
-		msg['radios'] = self._commonData.activeRadios
+		msg['src'] = self._commonData['id']
+		msg['radios'] = self._commonData['activeRadios']
 		return msg
 
 	def setWrite(self, cb):
