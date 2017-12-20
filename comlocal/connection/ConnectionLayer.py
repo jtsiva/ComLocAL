@@ -74,9 +74,6 @@ class ConnectionLayer(object):
 		"""
 		Send basic "Hello!" message on all radios
 		"""
-		if self._commonData['logging']['inUse']:
-			self._commonData['logging']['connection']['pings'] += 1
-
 
 		ping = json.loads('{"type":"ping"}')
 		ping['src'] = self._commonData['id']
@@ -84,6 +81,8 @@ class ConnectionLayer(object):
 		with self._radioLock:
 			for radio in self._radioList:
 				radio.write(ping)
+				if self._commonData['logging']['inUse']:
+					self._commonData['logging']['connection']['pings'] += 1
 				if self._commonData['logging']['inUse']:
 					logging.debug('connection--pinging on %s', radio._name)
 			#
