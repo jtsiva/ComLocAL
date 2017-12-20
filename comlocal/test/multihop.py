@@ -14,7 +14,7 @@ def main():
 
 	args =  parser.parse_args()
 
-	com = Com.com(log=True, configFile='default.conf')
+	com = Com.Com(log=True, configFile='default.conf')
 
 	try:
 		if args.role is 'sender':
