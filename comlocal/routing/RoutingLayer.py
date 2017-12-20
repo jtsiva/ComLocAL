@@ -38,7 +38,7 @@ class RoutingLayer(object):
 		r = map(lambda h: self._handlePing(h), filter(lambda x: self._isPing(x), messages))
 
 		#get messages that need to be forwarded and forward
-		r += map(lambda h: self._handleFoward(h), filter(lambda x: self._needsForward(x), messages))
+		r += map(lambda h: self._handleForward(h), filter(lambda x: self._needsForward(x), messages))
 		try:
 			#get messages that need to handled by command handler and handle
 			r += map(lambda h: self._handleCmd(h), filter(lambda x: (not self._needsForward(x)) and self._isCommand(x), messages))
