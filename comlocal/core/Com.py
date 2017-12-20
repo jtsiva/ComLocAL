@@ -7,10 +7,18 @@ from comlocal.message import MessageLayer
 import random
 import Queue
 import threading
+import logging
 
 class Com(object):
-	def __init__(self):
-		self._commonData = self._initCommonData(CommonData.CommonData())
+	def __init__(self, log = False, logFile = 'com.log'):
+
+		if log:
+			logging.basicConfig(filename=logFile, level=logging.INFO, format='%(asctime)s %(message)s', datefmt='%I:%M:%S %p')
+
+
+		self._commonData = {}
+		self._initCommonData(log)
+
 		self._connL = ConnectionLayer.ConnectionLayer(self._commonData, self._getRadios())
 		self._routeL = RoutingLayer.RoutingLayer(self._commonData)
 		self._messageL = MessageLayer.MessageLayer(self._commonData)
@@ -32,11 +40,10 @@ class Com(object):
 		self._readThread = threading.Thread(target=self._procRead)
 		self._writeThread = threading.Thread(target=self._procWrite)
 	
-
 	#
 
 	def __del__(self):
-		self.stop() #can't guarantee this will be called, but this is here jic
+		pass#self.stop() #can't guarantee this will be called, but this is here jic
 
 	def start(self):
 		self._connL.start(1)
@@ -53,6 +60,10 @@ class Com(object):
 		self._threadsRunning = False
 		self._readThread.join()
 		self._writeThread.join()
+		if self._commonData['logging']['inUse']:
+			#print summary information for this layer
+			pass
+
 
 
 	def _procRead(self):
@@ -69,14 +80,17 @@ class Com(object):
 		while self._threadsRunning:
 			pass
 
-	def _initCommonData(self, commonData):
+	def _initCommonData(self, log):
 		"""
 		Init the common data by, say, reading from a file
 
 		TODO: read beginning config from file
 		"""
-		commonData.id = random.randrange(255)
-		return commonData
+		self._commonData['id'] = random.randrange(255)
+		self._commonData['location'] = (0,0,0)
+		self._commonData['activeRadios'] = []
+		self._commonData['logging'] = {} if not log else {'inUse': True}
+	#
 
 
 	def _getRadios(self):

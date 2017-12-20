@@ -4,6 +4,7 @@ import threading
 from multiprocessing import Lock
 import time
 import json
+import logging
 import pdb
 
 class Stats(object):
@@ -30,7 +31,7 @@ class ConnectionLayer(object):
 		#
 
 		self._checkRadios() #weed out any radios that are not *actually* active
-		self._commonData.activeRadios = [radio._name for radio in self._radioList] #initialize commonData
+		self._commonData['activeRadios'] = [radio._name for radio in self._radioList] #initialize commonData
 	
 		self._radioLock = Lock()
 	#
@@ -48,6 +49,9 @@ class ConnectionLayer(object):
 		Start sending out a ping to let other devices know
 		we're here. Delay, in seconds, between pings set by delay (float possible)
 		"""
+		if self._commonData['logging']['inUse']:
+			self._commonData['logging']['connection'] = {'pings' : 0, 'sent': 0, 'received' : 0}
+
 		for radio in self._radioList:
 			radio.start()
 		self._pingDelay = delay
@@ -58,6 +62,13 @@ class ConnectionLayer(object):
 		for radio in self._radioList:
 			radio.stop()
 		self._runPing = False
+		if self._commonData['logging']['inUse']:
+			logging.info('ConnectionLayer Summary: pings %d, sent %d, received %d', \
+				self._commonData['logging']['connection']['pings'],\
+				self._commonData['logging']['connection']['sent'],\
+				self._commonData['logging']['connection']['received'])
+			#print summary information for this layer
+			pass
 
 	def _ping(self):
 		"""
@@ -65,11 +76,15 @@ class ConnectionLayer(object):
 		"""
 
 		ping = json.loads('{"type":"ping"}')
-		ping['src'] = self._commonData.id
+		ping['src'] = self._commonData['id']
 
 		with self._radioLock:
 			for radio in self._radioList:
 				radio.write(ping)
+				if self._commonData['logging']['inUse']:
+					self._commonData['logging']['connection']['pings'] += 1
+				if self._commonData['logging']['inUse']:
+					logging.debug('connection--pinging on %s', radio._name)
 			#
 		#
 
@@ -107,13 +122,14 @@ class ConnectionLayer(object):
 
 		for radio in self._radioList:
 			msg = radio.read()
-			try:
-				msg = msg if msg['sentby'] != radio.getProperties().addr else None
-			except KeyError:
-				pass
-
 			if msg is not None:
-				data.append(self._addRadioField(msg, radio._name))
+				try:
+					if msg['sentby'] != radio.getProperties().addr:
+						if self._commonData['logging']['inUse']:
+							self._commonData['logging']['connection']['received'] += 1
+						data.append(self._addRadioField(msg, radio._name))
+				except KeyError:
+					pass		
 		#
 
 		return data
@@ -140,6 +156,8 @@ class ConnectionLayer(object):
 				for radio in filter(lambda x: x._name in msg['radios'], self._radioList):
 					if radio.getProperties().maxPacketLength >= len(msg):
 						radio.write(msg)
+						if self._commonData['logging']['inUse']:
+							self._commonData['logging']['connection']['sent'] += 1
 					#
 				#
 			#

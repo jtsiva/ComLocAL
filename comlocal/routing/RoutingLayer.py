@@ -3,6 +3,7 @@ import json
 import time
 import threading
 from multiprocessing import Lock
+import logging
 import pdb
 
 class Stats(object):
@@ -45,6 +46,9 @@ class RoutingLayer(object):
 			print 'Command handler not set?'
 			raise e
 
+		if self._commonData['logging']['inUse']:
+			self._commonData['logging']['routing']['msgRcv'] += (len(messages) - len(r))
+
 		#return the rest of the messages because these are local
 		return filter(lambda x: x not in r, messages)
 
@@ -54,6 +58,8 @@ class RoutingLayer(object):
 		are removed. Delay, in seconds, between checks set by delay
 		(float possible)
 		"""
+		if self._commonData['logging']['inUse']:
+			self._commonData['logging']['routing'] = {'pingsRcv' : 0, 'msgSnt': 0, 'msgRcv' : 0, 'cmdRcv' : 0, 'entriesDel' : 0, 'entriesAdd' : 0, 'fwd': 0}
 		self._agingDelay = delay
 		self._maxAge = maxAge
 		self._runAging = True
@@ -62,6 +68,15 @@ class RoutingLayer(object):
 
 	def stop(self):
 		self._runAging = False
+		if self._commonData['logging']['inUse']:
+			logging.info("RoutingLayer Summary: pingsRcv - %d, msgSnt - %d, msgRcv - %d, cmdRcv - %d, entriesDel - %d, entriesAdd - %d, fwd - %d",
+				self._commonData['logging']['routing']['pingsRcv'],\
+				self._commonData['logging']['routing']['msgSnt'],\
+				self._commonData['logging']['routing']['msgRcv'],\
+				self._commonData['logging']['routing']['cmdRcv'],\
+				self._commonData['logging']['routing']['entriesDel'],\
+				self._commonData['logging']['routing']['entriesAdd'],\
+				self._commonData['logging']['routing']['fwd'])
 
 
 	def _ageTable(self):
@@ -76,6 +91,8 @@ class RoutingLayer(object):
 		with self._tableLock:
 			for ID, radio in toDelete.iteritems():
 				del self._routingTable[ID][radio]
+				if self._commonData['logging']['inUse']:
+					self._commonData['logging']['routing']['entriesDel'] += 1
 
 				#TODO: decide if we want to to completely remove entry
 				# if {} == self._routingTable[ID]:
@@ -104,6 +121,9 @@ class RoutingLayer(object):
 		
 		"""
 		#pdb.set_trace()
+
+		if self._commonData['logging']['inUse']:
+			self._commonData['logging']['routing']['pingsRcv'] += 1
 		self._updateRoutingTable(msg)
 
 		return msg
@@ -127,6 +147,8 @@ class RoutingLayer(object):
 
 			if not (msg['radio'] in self._routingTable[msg['src']]):
 				self._routingTable[msg['src']][msg['radio']] = {}
+				if self._commonData['logging']['inUse']:
+					self._commonData['logging']['routing']['entriesAdd'] += 1
 
 			self._routingTable[msg['src']][msg['radio']]['addr'] = msg['sentby']
 			self._routingTable[msg['src']][msg['radio']]['time'] = time.time()
@@ -143,6 +165,8 @@ class RoutingLayer(object):
 			return False
 
 	def _handleForward(self, msg):
+		if self._commonData['logging']['inUse']:
+			self._commonData['logging']['routing']['fwd'] += 1
 		self.write(msg)
 		return msg
 
@@ -160,6 +184,8 @@ class RoutingLayer(object):
 		self._writeCB = cb
 
 	def write(self, msg):
+		if self._commonData['logging']['inUse']:
+			self._commonData['logging']['routing']['msgSnt'] += 1
 		return self._writeCB(self._route(msg))
 
 
