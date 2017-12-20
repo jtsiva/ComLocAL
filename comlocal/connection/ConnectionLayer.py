@@ -85,7 +85,7 @@ class ConnectionLayer(object):
 			for radio in self._radioList:
 				radio.write(ping)
 				if self._commonData['logging']['inUse']:
-					logging.info('connection--pinging on %s', radio._name)
+					logging.debug('connection--pinging on %s', radio._name)
 			#
 		#
 
