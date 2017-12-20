@@ -14,7 +14,7 @@ class Com(object):
 	def __init__(self, log = False, logFile = 'com.log', configFile = None):
 
 		if log:
-			logging.basicConfig(filename=logFile, filemode='w' level=logging.INFO, format='%(asctime)s %(message)s', datefmt='%I:%M:%S %p')
+			logging.basicConfig(filename=logFile, filemode='w', level=logging.INFO, format='%(asctime)s %(message)s', datefmt='%I:%M:%S %p')
 
 
 		self._commonData = {}
