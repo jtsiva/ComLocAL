@@ -100,13 +100,6 @@ class ConnectionLayer(object):
 		Add a field to the message indicating which interface the message
 		arrived on.
 		"""
-
-		#TODO: should this field be removed before sending?
-		try:
-			del msg['radios'] #appended by sender but not needed on read
-		except Exception as e:
-			pass #do nothing (this *might* be useful later)
-
 		msg['radio'] = radioName
 		return msg
 
@@ -155,8 +148,12 @@ class ConnectionLayer(object):
 		"""
 		try:
 			with self._radioLock:
-				for radio in filter(lambda x: x._name in msg['radios'], self._radioList):
-					if radio.getProperties().maxPacketLength >= len(msg):
+				radios = msg['radios']
+				del msg['radios'] #don't want to send this
+				print msg
+				print len(msg)
+				for radio in filter(lambda x: x._name in radios, self._radioList):
+					if radio.getProperties().maxPacketLength >= len(json.dumps(msg)):
 						radio.write(msg)
 						if self._commonData['logging']['inUse']:
 							self._commonData['logging']['connection']['sent'] += 1

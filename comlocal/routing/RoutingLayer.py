@@ -176,7 +176,9 @@ class RoutingLayer(object):
 		
 		TODO: add actual routing algorithms here
 		"""
-		msg['src'] = self._commonData['id']
+		if 'src' not in msg:#don't update since we want to know who the *original* sender is
+			msg['src'] = self._commonData['id']
+		#
 		msg['radios'] = self._commonData['activeRadios']
 		return msg
 
