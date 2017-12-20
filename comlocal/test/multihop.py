@@ -2,6 +2,7 @@
 from comlocal.core import Com
 import time
 import argparse
+import json
 
 def readHandler(msg):
 	print json.dumps(msg)
