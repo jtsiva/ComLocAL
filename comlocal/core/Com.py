@@ -107,7 +107,8 @@ class Com(object):
 		radios = []
 		if 'WiFi' in self._commonData['startRadios']:
 			radios.append(WiFi.WiFi())
-		elif 'BT' in self._commonData['startRadios']:
+		
+		if 'BT' in self._commonData['startRadios']:
 			radios.append(Bluetooth.Bluetooth())
 		#
 		
