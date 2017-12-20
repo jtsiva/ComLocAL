@@ -160,7 +160,7 @@ class RoutingLayer(object):
 		Check if the message is intended for this node or not
 		"""
 		try:
-			return msg['dest'] != self._commonData.id
+			return msg['dest'] != self._commonData.id and msg['src'] != self._commonData.id
 		except KeyError:
 			return False
 

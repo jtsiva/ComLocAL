@@ -100,6 +100,8 @@ class ConnectionLayer(object):
 		Add a field to the message indicating which interface the message
 		arrived on.
 		"""
+
+		#TODO: should this field be removed before sending?
 		try:
 			del msg['radios'] #appended by sender but not needed on read
 		except Exception as e:
