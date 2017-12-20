@@ -189,7 +189,7 @@ class Bluetooth (Radio.Radio):
 		"""
 		FNULL = open(os.devnull, 'w')
 
-		payload = ' '.join("{0:02X}".format(ord(x)) for x in json.dumps(data))
+		payload = ' '.join("{0:02X}".format(ord(x)) for x in self._asString(data))
 		length =  ''.join("{0:02X}".format(len(payload.split()) + 3))
 		total = ''.join("{0:02X}".format(len(payload.split()) + 7))
 

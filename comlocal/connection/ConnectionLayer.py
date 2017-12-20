@@ -162,10 +162,10 @@ class ConnectionLayer(object):
 			with self._radioLock:
 
 				radios, msg = self._cleanOutoing(msg)
-				print msg
-				print len(json.dumps(msg))
+				# print msg
+				# print len(json.dumps(msg))
 				for radio in filter(lambda x: x._name in radios, self._radioList):
-					if radio.getProperties().maxPacketLength >= len(json.dumps(msg)):
+					if radio.getProperties().maxPacketLength >= len(json.dumps(msg,separators=(',', ':'))):
 						radio.write(msg)
 						if self._commonData['logging']['inUse']:
 							self._commonData['logging']['connection']['sent'] += 1
