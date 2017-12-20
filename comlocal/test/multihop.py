@@ -22,7 +22,7 @@ def main():
 			com.start()
 			cnt = args.count if args.count is not None else 100
 			for i in range(cnt):
-				com.write(json.loads('{"type" : "msg", "dest" : 3, "payload" : "hello"}'))
+				com.write(json.loads('{"type" : "msg", "dest" : 3, "msg" : "hello"}'))
 			#
 		#	
 		elif args.role == 'forwarder':

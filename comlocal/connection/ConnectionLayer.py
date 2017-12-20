@@ -140,6 +140,18 @@ class ConnectionLayer(object):
 		"""
 		return self._radioList
 
+	def _cleanOutoing (self, msg):
+		if 'radio' in msg: #from forwarding
+			del msg['radio']
+		if 'sentby' in msg: #from forwarding
+			del msg['sentby']
+
+		radios = msg['radios']
+		del msg['radios'] #for choosing how to send, but don't want to send this
+
+		return radios, msg
+	#
+
 	def write(self, msg):
 		"""
 		Write msg to radios
@@ -148,10 +160,10 @@ class ConnectionLayer(object):
 		"""
 		try:
 			with self._radioLock:
-				radios = msg['radios']
-				del msg['radios'] #don't want to send this
+
+				radios, msg = self._cleanOutoing(msg)
 				print msg
-				print len(msg)
+				print len(json.dumps(msg))
 				for radio in filter(lambda x: x._name in radios, self._radioList):
 					if radio.getProperties().maxPacketLength >= len(json.dumps(msg)):
 						radio.write(msg)
