@@ -17,17 +17,17 @@ def main():
 	com = Com.Com(log=True, configFile='default.conf')
 
 	try:
-		if args.role is 'sender':
+		if args.role == 'sender':
 			com.start()
 			cnt = args.count if args.count is not None else 100
 			for i in range(cnt):
 				com.write(json.loads('{"type" : "msg", "dest" : 3, "payload" : "hello"}'))
 			#
 		#	
-		elif args.role is 'forwarder':
+		elif args.role == 'forwarder':
 			com.start()
 			time.sleep(30)
-		elif args.role is 'listener':
+		elif args.role == 'listener':
 			com.setReadHandler(readHandler)
 			com.start()
 			time.sleep(30)
