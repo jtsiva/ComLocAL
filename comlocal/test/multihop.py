@@ -12,6 +12,7 @@ def main():
 	parser = argparse.ArgumentParser()
 	parser.add_argument ("-r", "--role", required = True, help="set the role for this device ('sender', 'forwarder', 'listener')")
 	parser.add_argument ("-c", "--count", help="set the number messages that sender should send")
+	parser.add_argument ("-d", "--delay", help="set delay in seconds (float) between messages")
 
 	args =  parser.parse_args()
 
@@ -20,9 +21,11 @@ def main():
 	try:
 		if args.role == 'sender':
 			com.start()
-			cnt = args.count if args.count is not None else 100
+			cnt = int(args.count) if args.count is not None else 100
+			delay = float(args.delay) if args.delay is not None else 0
 			for i in range(cnt):
 				com.write(json.loads('{"type" : "msg", "dest" : 3, "msg" : "hello"}'))
+				time.sleep(delay)
 			#
 		#	
 		elif args.role == 'forwarder':
