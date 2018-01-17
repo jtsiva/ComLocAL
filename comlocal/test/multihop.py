@@ -3,6 +3,8 @@ from comlocal.core import Com
 import time
 import argparse
 import json
+#debug only!
+import yappi
 
 def readHandler(msg):
 	print json.dumps(msg)
@@ -43,4 +45,10 @@ def main():
 
 
 if __name__ == "__main__":
+	yappi.set_clock_type('cpu')
+	yappi.start(builtins=True)
 	main()
+	funcStats = yappi.get_func_stats()
+	threadStats = yappi.get_thread_stats()
+	funcStats.save('callgrind.func.prof', type='callgrind')
+	#threadStats.save('callgrind.thread.prof', type='callgrind')
