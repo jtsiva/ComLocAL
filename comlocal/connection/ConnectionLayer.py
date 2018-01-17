@@ -61,7 +61,10 @@ class ConnectionLayer(object):
 	def stop(self):
 		for radio in self._radioList:
 			radio.stop()
+		self._pingStopped = False #used to confirm stopped
 		self._runPing = False
+		while not self._pingStopped: #spin until confirmed
+			pass
 		if self._commonData['logging']['inUse']:
 			logging.info('ConnectionLayer Summary: pingsSnt %d, sent %d, received %d', \
 				self._commonData['logging']['connection']['pings'],\
@@ -91,6 +94,8 @@ class ConnectionLayer(object):
 		if self._runPing:
 			#reschedule for later only if runPing is true
 			threading.Timer(self._pingDelay, self._ping).start()
+		else:
+			self._pingStopped = True
 	#
 
 
