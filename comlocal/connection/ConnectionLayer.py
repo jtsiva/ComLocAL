@@ -59,8 +59,11 @@ class ConnectionLayer(object):
 		self._ping() #start pinging
 
 	def stop(self):
+		print 'CL stop'
 		for radio in self._radioList:
+			print radio._name() + ' stop'
 			radio.stop()
+			print 'done'
 		self._pingStopped = False #used to confirm stopped
 		self._runPing = False
 		while not self._pingStopped: #spin until confirmed
@@ -70,8 +73,9 @@ class ConnectionLayer(object):
 				self._commonData['logging']['connection']['pings'],\
 				self._commonData['logging']['connection']['sent'],\
 				self._commonData['logging']['connection']['received'])
-			#print summary information for this layer
-			pass
+		
+		print 'done'
+
 
 	def _ping(self):
 		"""
