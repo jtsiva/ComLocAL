@@ -60,14 +60,17 @@ class ConnectionLayer(object):
 
 	def stop(self):
 		print 'CL stop'
-		for radio in self._radioList:
-			print radio._name + ' stop'
-			radio.stop()
-			print 'done'
+		
 		self._pingStopped = False #used to confirm stopped
 		self._runPing = False
 		while not self._pingStopped: #spin until confirmed
 			pass
+
+		for radio in self._radioList:
+			print radio._name + ' stop'
+			radio.stop()
+			print 'done'
+
 		if self._commonData['logging']['inUse']:
 			logging.info('ConnectionLayer Summary: pingsSnt %d, sent %d, received %d', \
 				self._commonData['logging']['connection']['pings'],\
