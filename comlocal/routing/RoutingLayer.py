@@ -39,12 +39,6 @@ class RoutingLayer(object):
 
 		#get messages that need to be forwarded and forward
 		r += map(lambda h: self._handleForward(h), filter(lambda x: self._needsForward(x), messages))
-		try:
-			#get messages that need to handled by command handler and handle
-			r += map(lambda h: self._handleCmd(h), filter(lambda x: (not self._needsForward(x)) and self._isCommand(x), messages))
-		except Exception as e:
-			print 'Command handler not set?'
-			raise e
 
 		if self._commonData['logging']['inUse']:
 			self._commonData['logging']['routing']['msgRcv'] += (len(messages) - len(r))
@@ -94,9 +88,8 @@ class RoutingLayer(object):
 				if self._commonData['logging']['inUse']:
 					self._commonData['logging']['routing']['entriesDel'] += 1
 
-				#TODO: decide if we want to to completely remove entry
-				# if {} == self._routingTable[ID]:
-				# 	del self._routingTable[ID]
+				if {} == self._routingTable[ID]:
+					del self._routingTable[ID]
 
 		if self._commonData['logging']['inUse']:
 			logging.info('routing:' + self._getRoutes())
@@ -186,25 +179,17 @@ class RoutingLayer(object):
 		self._writeCB = cb
 
 	def write(self, msg):
-		if self._commonData['logging']['inUse']:
-			self._commonData['logging']['routing']['msgSnt'] += 1
-		return self._writeCB(self._route(msg))
+		if  msg['type'] == "cmd":
+			if msg['cmd'] == 'getNeighbors':
+				msg['result'] = self._routingTable.keys()
+				return msg
+			else:
+				return self._writeCB(msg)
+		else:
+			if self._commonData['logging']['inUse']:
+				self._commonData['logging']['routing']['msgSnt'] += 1
+			return self._writeCB(self._route(msg))
 
-
-# NOT SURE IF I WANT TO HANDLE THIS HERE OR THE MESSAGE LAYER
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	def setCmdHandler(self, cb):
-		"""
-		Need to set a callback that will handle a message
-		that is a command
-		"""
-		self._cmdHandler = cb
-
-	def _isCommand(self, msg):
-		try:
-			return msg['type'] == "cmd"
-		except KeyError:
-			return False
 
 	def _handleCommmand(self, msg):
 		"""
@@ -217,7 +202,5 @@ class RoutingLayer(object):
 			raise e
 		finally:
 			return msg
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 #
