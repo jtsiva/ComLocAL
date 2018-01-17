@@ -88,9 +88,8 @@ class RoutingLayer(object):
 				if self._commonData['logging']['inUse']:
 					self._commonData['logging']['routing']['entriesDel'] += 1
 
-				#TODO: decide if we want to to completely remove entry
-				# if {} == self._routingTable[ID]:
-				# 	del self._routingTable[ID]
+				if {} == self._routingTable[ID]:
+					del self._routingTable[ID]
 
 		if self._commonData['logging']['inUse']:
 			logging.info('routing:' + self._getRoutes())
