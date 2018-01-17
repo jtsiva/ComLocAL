@@ -61,7 +61,7 @@ class ConnectionLayer(object):
 	def stop(self):
 		print 'CL stop'
 		for radio in self._radioList:
-			print radio._name() + ' stop'
+			print radio._name + ' stop'
 			radio.stop()
 			print 'done'
 		self._pingStopped = False #used to confirm stopped
