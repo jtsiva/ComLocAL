@@ -39,12 +39,6 @@ class RoutingLayer(object):
 
 		#get messages that need to be forwarded and forward
 		r += map(lambda h: self._handleForward(h), filter(lambda x: self._needsForward(x), messages))
-		try:
-			#get messages that need to handled by command handler and handle
-			r += map(lambda h: self._handleCmd(h), filter(lambda x: (not self._needsForward(x)) and self._isCommand(x), messages))
-		except Exception as e:
-			print 'Command handler not set?'
-			raise e
 
 		if self._commonData['logging']['inUse']:
 			self._commonData['logging']['routing']['msgRcv'] += (len(messages) - len(r))
