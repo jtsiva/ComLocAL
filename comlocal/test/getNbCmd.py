@@ -6,7 +6,7 @@ import time
 import random
 
 
-com = Com.Com()
+com = Com.Com(log=True)
 
 def run():
 	if run.repeat > 0:
