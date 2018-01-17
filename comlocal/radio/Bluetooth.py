@@ -96,7 +96,7 @@ class Bluetooth (Radio.Radio):
 	def stop(self):
 		# self._threadRunning = False
 		# self._readThread.join()
-		self._bluez.hci_le_set_scan_enable(
+		err = self._bluez.hci_le_set_scan_enable(
 		    self._sock.fileno(),
 		    0,  # 1 - turn on;  0 - turn off
 		    0, # 0-filtering disabled, 1-filter out duplicates
