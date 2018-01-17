@@ -12,7 +12,7 @@ def run():
 	if run.repeat > 0:
 		print com.write({'type':'cmd','cmd':'getNeighbors'})
 		run.repeat -= 1
-		threading.Time(5,run).start()
+		threading.Timer(5,run).start()
 
 def main():
 	run.repeat = 5
