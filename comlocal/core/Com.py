@@ -78,8 +78,9 @@ class Com(object):
 					self._readHandler(msg)
 
 	def _procWrite(self):
-		while self._threadsRunning:
-			pass
+		pass
+		# while self._threadsRunning:
+		# 	pass
 
 	def _initCommonData(self, log, configFile):
 		"""
