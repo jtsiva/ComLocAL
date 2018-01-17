@@ -186,25 +186,16 @@ class RoutingLayer(object):
 		self._writeCB = cb
 
 	def write(self, msg):
-		if self._commonData['logging']['inUse']:
-			self._commonData['logging']['routing']['msgSnt'] += 1
-		return self._writeCB(self._route(msg))
+		if  msg['type'] == "cmd":
+			if msg['cmd'] == 'getNeighbors':
+				msg['result'] = self._getRoutes()
+			else:
+				return self._writeCB(msg)
+		else:
+			if self._commonData['logging']['inUse']:
+				self._commonData['logging']['routing']['msgSnt'] += 1
+			return self._writeCB(self._route(msg))
 
-
-# NOT SURE IF I WANT TO HANDLE THIS HERE OR THE MESSAGE LAYER
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	def setCmdHandler(self, cb):
-		"""
-		Need to set a callback that will handle a message
-		that is a command
-		"""
-		self._cmdHandler = cb
-
-	def _isCommand(self, msg):
-		try:
-			return msg['type'] == "cmd"
-		except KeyError:
-			return False
 
 	def _handleCommmand(self, msg):
 		"""
@@ -217,7 +208,5 @@ class RoutingLayer(object):
 			raise e
 		finally:
 			return msg
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 #

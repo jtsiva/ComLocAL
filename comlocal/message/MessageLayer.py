@@ -24,4 +24,13 @@ class MessageLayer(object):
 		return msg
 
 	def write(self, msg):
-		return self._writeCB(self._addMsgId(msg))
+		try:
+			if 'msg' in msg['type'] and 'msg' in msg and 'dest' in msg:
+				return self._writeCB(self._addMsgId(msg))
+			elif 'cmd' in msg['type'] and 'cmd' in msg:
+				return self._writeCB(msg)
+			else:
+				raise KeyError
+		except KeyError:
+			msg['result'] = 'failed: poorly formed message'
+			return msg

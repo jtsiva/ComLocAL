@@ -159,22 +159,26 @@ class ConnectionLayer(object):
 		return true if successful, false otherwise
 		"""
 		try:
-			with self._radioLock:
-
-				radios, msg = self._cleanOutoing(msg)
-				# print msg
-				# print len(json.dumps(msg))
-				for radio in filter(lambda x: x._name in radios, self._radioList):
-					if radio.getProperties().maxPacketLength >= len(json.dumps(msg,separators=(',', ':'))):
-						radio.write(msg)
-						if self._commonData['logging']['inUse']:
-							self._commonData['logging']['connection']['sent'] += 1
+			if  msg['type'] == "cmd":
+				msg['result'] = 'failed:  command no recognized'
+			else:
+				with self._radioLock:
+					radios, msg = self._cleanOutoing(msg)
+					# print msg
+					# print len(json.dumps(msg))
+					for radio in filter(lambda x: x._name in radios, self._radioList):
+						if radio.getProperties().maxPacketLength >= len(json.dumps(msg,separators=(',', ':'))):
+							radio.write(msg)
+							if self._commonData['logging']['inUse']:
+								self._commonData['logging']['connection']['sent'] += 1
+						#
 					#
 				#
-			#
-			return True
+				msg['result'] = 'success'
 		except Exception as e:
-			return False
+			msg['result'] = 'failed: ' + e
+
+		return msg
 
 		
 
