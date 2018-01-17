@@ -84,7 +84,7 @@ class Bluetooth (Radio.Radio):
 		    self._sock.fileno(),
 		    1,  # 1 - turn on;  0 - turn off
 		    0, # 0-filtering disabled, 1-filter out duplicates
-		    1000  # timeout
+		    5000  # timeout
 		)
 		if err < 0:
 			errnum = get_errno()
@@ -96,19 +96,18 @@ class Bluetooth (Radio.Radio):
 	def stop(self):
 		# self._threadRunning = False
 		# self._readThread.join()
-		while 0 > self._bluez.hci_le_set_scan_enable(
+		self._bluez.hci_le_set_scan_enable(
 		    self._sock.fileno(),
 		    0,  # 1 - turn on;  0 - turn off
 		    0, # 0-filtering disabled, 1-filter out duplicates
 		    1000  # timeout
-		):
-			pass
-		# if err < 0:
-		# 	errnum = get_errno()
-		# 	raise Exception("{} {}".format(
-		# 	    errno.errorcode[errnum],
-		# 	    os.strerror(errnum)
-		# 	))
+		)
+		if err < 0:
+			errnum = get_errno()
+			raise Exception("{} {}".format(
+			    errno.errorcode[errnum],
+			    os.strerror(errnum)
+			))
 
 
 

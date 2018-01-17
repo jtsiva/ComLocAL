@@ -92,7 +92,7 @@ class RoutingLayer(object):
 				if self._commonData['logging']['inUse']:
 					self._commonData['logging']['routing']['entriesDel'] += 1
 
-				if self._routingTable[ID] is {}:
+				if not self._routingTable[ID]:
 					del self._routingTable[ID]
 
 		if self._commonData['logging']['inUse']:
