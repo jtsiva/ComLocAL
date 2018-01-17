@@ -183,6 +183,7 @@ class RoutingLayer(object):
 		if  msg['type'] == "cmd":
 			if msg['cmd'] == 'getNeighbors':
 				msg['result'] = self._getRoutes()
+				return msg
 			else:
 				return self._writeCB(msg)
 		else:
