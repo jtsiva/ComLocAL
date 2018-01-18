@@ -61,7 +61,10 @@ class RoutingLayer(object):
 	#
 
 	def stop(self):
+		self._agingStopped = False #same idea as CL
 		self._runAging = False
+		while not self._agingStopped: #spin until confirmed
+			pass
 		if self._commonData['logging']['inUse']:
 			logging.info("RoutingLayer Summary: pingsRcv - %d, msgSnt - %d, msgRcv - %d, cmdRcv - %d, entriesDel - %d, entriesAdd - %d, fwd - %d",
 				self._commonData['logging']['routing']['pingsRcv'],\
@@ -71,7 +74,6 @@ class RoutingLayer(object):
 				self._commonData['logging']['routing']['entriesDel'],\
 				self._commonData['logging']['routing']['entriesAdd'],\
 				self._commonData['logging']['routing']['fwd'])
-
 
 	def _ageTable(self):
 
@@ -88,7 +90,7 @@ class RoutingLayer(object):
 				if self._commonData['logging']['inUse']:
 					self._commonData['logging']['routing']['entriesDel'] += 1
 
-				if {} == self._routingTable[ID]:
+				if not self._routingTable[ID]:
 					del self._routingTable[ID]
 
 		if self._commonData['logging']['inUse']:
@@ -97,6 +99,8 @@ class RoutingLayer(object):
 		if self._runAging:
 			#reschedule for later only if runAging is true
 			threading.Timer(self._agingDelay, self._ageTable).start()
+		else:
+			self._agingStopped = True
 		#
 
 	def _getRoutes(self):
