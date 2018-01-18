@@ -55,7 +55,6 @@ class Com(object):
 		self._writeThread.start()
 
 	def stop(self):
-		print 'Com stop'
 		self._connL.stop()
 		self._routeL.stop()
 
@@ -65,7 +64,6 @@ class Com(object):
 		if self._commonData['logging']['inUse']:
 			#print summary information for this layer
 			pass
-		print 'done'
 
 
 

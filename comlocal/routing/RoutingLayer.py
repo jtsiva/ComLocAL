@@ -61,7 +61,6 @@ class RoutingLayer(object):
 	#
 
 	def stop(self):
-		print "RL stop"
 		self._agingStopped = False #same idea as CL
 		self._runAging = False
 		while not self._agingStopped: #spin until confirmed
@@ -75,7 +74,6 @@ class RoutingLayer(object):
 				self._commonData['logging']['routing']['entriesDel'],\
 				self._commonData['logging']['routing']['entriesAdd'],\
 				self._commonData['logging']['routing']['fwd'])
-		print 'done'
 
 	def _ageTable(self):
 
