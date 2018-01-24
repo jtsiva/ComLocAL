@@ -35,10 +35,17 @@ class RadioManagerService(service.Service):
 		return True
 
 	def handleCmd (self, cmd):
-		if self.isAuthorized('blah'):
+		try:
+			key = cmd['auth']
+		except:
+			key = ''
+
+		log.msg (json.dumps(cmd))
+
+		if self.isAuthorized(key):
 			if 'get_radios' == cmd['cmd']:
 				cmd['result'] = self._radioReg
-			elif 'register' == cmd['cmd']:
+			elif 'reg_radio' == cmd['cmd']:
 				try:
 					name = cmd['name']
 					props = cmd['props'] #minimally should contain port
@@ -46,7 +53,7 @@ class RadioManagerService(service.Service):
 					cmd['result'] = 'success'
 				except KeyError:
 					cmd['result'] = 'failed'
-			elif 'unregister' == cmd['cmd']:
+			elif 'unreg_radio' == cmd['cmd']:
 				try:
 					del self._radioReg[cmd['name']]
 					cmd['result'] = 'success'
