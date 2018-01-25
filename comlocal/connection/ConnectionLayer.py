@@ -1,19 +1,57 @@
-
-from comlocal.radio import Radio
-import threading
-from multiprocessing import Lock
 import time
 import json
-import logging
-import pdb
 
-class Stats(object):
-	def __init__(self):
-		self.read = 0
-		self.write = 0
-		self.lastUsed = 0
-		self.packetsDropped = 0 #poorly formed packets
-		self.up = True
+class Radio(object):
+	def __init__ (self, name, loc):
+		self._connections = {'<broadcast>' : 0}
+
+		self._name = name
+		self._loc = loc
+		self._writeCB = None
+		self._readCB = None
+
+	def setReadCB (self, cb):
+		self._readCB = cb
+
+	def setWriteCB (self, cb):
+		self._writeCB = cb
+
+	def keepAlive(self, connection):
+		# send a message with msg = 'keepalive' ?
+		pass
+
+	def addConnection(self, connection):
+		if connection not in self._connections:
+			self._connections[connection] = time.time()
+			#self.keepAlive()
+
+	def removeConnection (self, connection):
+		del self._connections[connection]
+
+	def read(self, data):
+		#add/remove fields from data
+		self._connections[data['sentby']] = time.time()
+		self._readCB(data)
+
+	def write(self, data):
+		#add/remove fields from data
+		del data['radios']
+		self._writeCB(data, self._loc)
+
+	def connectionThreshold (self, cutoff):
+		#delete connections that have been idle longer than cutoff
+		toDelete = []
+		for key, val in self._connections.iteritems():
+			if time.time() - val > cutoff:
+				toDelete.append(key)
+
+		for key in toDelete:
+			del self._connections[key]
+
+def popVal(myDict, key):
+	val = myDict[key]
+	del myDict[key]
+	return val, myDict
 
 class ConnectionLayer(object):
 	"""

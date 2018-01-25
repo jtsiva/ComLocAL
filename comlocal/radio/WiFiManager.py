@@ -2,6 +2,7 @@ from twisted.application import internet, service
 from twisted.internet import task
 from twisted.internet.protocol import ServerFactory, DatagramProtocol
 from twisted.python import log
+from comlocal.radio.RadioManager import RadioManagerProtocol
 import socket
 import fcntl
 import struct
@@ -129,7 +130,7 @@ class WiFiManagerProtocol(DatagramProtocol):
 			except KeyError:
 				pass #drop poorly formed packets
 
-radioMgrPort = 10247
+radioMgrPort = RadioManagerProtocol.myPort
 port = 10248
 iface = "0.0.0.0"
 

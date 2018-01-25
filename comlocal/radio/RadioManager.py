@@ -4,6 +4,8 @@ from twisted.python import log
 import json
 
 class RadioManagerProtocol (DatagramProtocol):
+	myPort = 10247
+
 	def __init__(self, service):
 		self._service = service
 
@@ -66,7 +68,7 @@ class RadioManagerService(service.Service):
 
 		return json.dumps(cmd)
 
-port = 10247
+port = RadioManagerProtocol.myPort
 iface = '127.0.0.1'
 authFile = ''
 
