@@ -1,79 +1,35 @@
-
+from comlocal.util.NetworkLayer import NetworkLayer
+import networkx as nx
 import json
 import time
-import threading
-from multiprocessing import Lock
-import logging
-import pdb
 
-class Stats(object):
-	def __init__(self):
-		self.packetsDropped = 0 #poorly formed packets
 
-class RoutingLayer(object):
+class RoutingLayer(NetworkLayer):
 	def __init__(self, commonData):
 		self._commonData = commonData
-		self._routingTable = {}
-		self._stats = Stats()
-		self._tableLock = Lock()
+		self._networkGraph = nx.MultiGraph()
 
-	def setRead(self, cb):
-		self._readCB = cb
+		self._networkGraph.addNode(self._commonData['id'], root=True)
 
-	def read(self):
-		"""
-		Read from the callback and filter through the
-		messages to determine who needs to handle what. All messages
-		intended for this agent will be returned.
-
-		Non-blocking
-
-		Returns a list of message (can be an empty list)
-		"""
-		messages = self._readCB()
-
-		#TODO: filter out poorly formed messages
-		#TODO: update routing table with non-ping messages
-
-		r = map(lambda h: self._handlePing(h), filter(lambda x: self._isPing(x), messages))
-
-		#get messages that need to be forwarded and forward
-		r += map(lambda h: self._handleForward(h), filter(lambda x: self._needsForward(x), messages))
-
-		if self._commonData['logging']['inUse']:
-			self._commonData['logging']['routing']['msgRcv'] += (len(messages) - len(r))
-
-		#return the rest of the messages because these are local
-		return filter(lambda x: x not in r, messages)
-
-	def start(self, delay, maxAge):
-		"""
-		Start aging the route table where entries older than maxAge
-		are removed. Delay, in seconds, between checks set by delay
-		(float possible)
-		"""
 		if self._commonData['logging']['inUse']:
 			self._commonData['logging']['routing'] = {'pingsRcv' : 0, 'msgSnt': 0, 'msgRcv' : 0, 'cmdRcv' : 0, 'entriesDel' : 0, 'entriesAdd' : 0, 'fwd': 0}
-		self._agingDelay = delay
-		self._maxAge = maxAge
-		self._runAging = True
-		self._ageTable()
-	#
+		
 
-	def stop(self):
-		self._agingStopped = False #same idea as CL
-		self._runAging = False
-		while not self._agingStopped: #spin until confirmed
-			pass
-		if self._commonData['logging']['inUse']:
-			logging.info("RoutingLayer Summary: pingsRcv - %d, msgSnt - %d, msgRcv - %d, cmdRcv - %d, entriesDel - %d, entriesAdd - %d, fwd - %d",
-				self._commonData['logging']['routing']['pingsRcv'],\
-				self._commonData['logging']['routing']['msgSnt'],\
-				self._commonData['logging']['routing']['msgRcv'],\
-				self._commonData['logging']['routing']['cmdRcv'],\
-				self._commonData['logging']['routing']['entriesDel'],\
-				self._commonData['logging']['routing']['entriesAdd'],\
-				self._commonData['logging']['routing']['fwd'])
+	def read(self, data):
+		"""
+		To be used as a callback
+		data is from the previous layer to handle the read
+
+		"""
+		if self._isPing(data):
+			self._handlePing(data)
+		elif self._needsForward(data):
+			self._handleForward(data)
+		else:
+			if self._commonData['logging']['inUse']:
+				self._commonData['logging']['routing']['msgRcv'] += 1
+			self.readCB(data)
+
 
 	def _ageTable(self):
 
@@ -133,23 +89,23 @@ class RoutingLayer(object):
 
 	def _updateRoutingTable(self, msg):
 		"""
-		Update the routing table based on information from
+		Update the network graph based on information from
 		the message. ASSUMES that msg has already been checked
 		for validity
 		"""
 
-		with self._tableLock:
-			if not (msg['src'] in self._routingTable):
-				self._routingTable[msg['src']] = {}
+		#TODO: expand to handle adding whole paths or updating from
+		#another node's network graph
 
-			if not (msg['radio'] in self._routingTable[msg['src']]):
-				self._routingTable[msg['src']][msg['radio']] = {}
-				if self._commonData['logging']['inUse']:
-					self._commonData['logging']['routing']['entriesAdd'] += 1
+		if msg['src'] not in self._networkGraph:
+			self._routingTable.addNode(msg['src'], root=False)
+			if self._commonData['logging']['inUse']:
+				self._commonData['logging']['routing']['entriesAdd'] += 1
 
-			self._routingTable[msg['src']][msg['radio']]['addr'] = msg['sentby']
-			self._routingTable[msg['src']][msg['radio']]['time'] = time.time()
+		if msg['radio'] not in self._networkGraph.edges():
+			self._networkGraph.add_edge(self._commonData['id'], msg['src'], radio=msg['radio'], addr=msg['sentby'], time=0)
 
+		self._networkGraph.edges[self._commonData['id'], msg['src']]['time'] = time.time()
 	#
 
 	def _needsForward(self, msg):
@@ -165,7 +121,6 @@ class RoutingLayer(object):
 		if self._commonData['logging']['inUse']:
 			self._commonData['logging']['routing']['fwd'] += 1
 		self.write(msg)
-		return msg
 
 	def _route(self, msg):
 		"""
@@ -173,26 +128,26 @@ class RoutingLayer(object):
 		
 		TODO: add actual routing algorithms here
 		"""
-		if 'src' not in msg:#don't update since we want to know who the *original* sender is
-			msg['src'] = self._commonData['id']
-		#
-		msg['radios'] = self._commonData['activeRadios']
-		return msg
+		msg['src'] = self._commonData['id']
 
-	def setWrite(self, cb):
-		self._writeCB = cb
+		#https://stackoverflow.com/questions/15644684/best-practices-for-querying-graphs-by-edge-and-node-attributes-in-networkx
+		#red = ((u,v) for u,v,d in G.edges(data=True) if d['color']=='red')
+		
+		for radio in self._commonData['activeRadios']
+			
+		return msg
 
 	def write(self, msg):
 		if  msg['type'] == "cmd":
 			if msg['cmd'] == 'getNeighbors':
-				msg['result'] = self._routingTable.keys()
+				msg['result'] = self._networkGraph.neighbors(self._commonData['id'])
 				return msg
 			else:
-				return self._writeCB(msg)
+				return self.writeCB(msg)
 		else:
 			if self._commonData['logging']['inUse']:
 				self._commonData['logging']['routing']['msgSnt'] += 1
-			return self._writeCB(self._route(msg))
+			return self.writeCB(self._route(msg))
 
 
 	def _handleCommmand(self, msg):
