@@ -162,13 +162,13 @@ class ConnectionLayer(NetworkLayer):
 		return true if successful, false otherwise
 		"""
 
-		for radio in self.radios:
-			if radio in msg['radios']:
+		for radio, addr in msg['radios']:
+			if radio in self.radios:
+				msg['addr'] = addr
 				if self._commonData['logging']['inUse']:
 					self._commonData['logging']['connection']['sent'] += 1
 				
 				ret = radio.write(msg)
-				
 		return ret
 
 		

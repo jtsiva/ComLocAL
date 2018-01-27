@@ -7,13 +7,16 @@ import time
 class RoutingLayer(NetworkLayer):
 	def __init__(self, commonData):
 		self._commonData = commonData
+		self._costFunction = defaultCost
 		self._networkGraph = nx.MultiGraph()
 
 		self._networkGraph.addNode(self._commonData['id'], root=True)
 
 		if self._commonData['logging']['inUse']:
 			self._commonData['logging']['routing'] = {'pingsRcv' : 0, 'msgSnt': 0, 'msgRcv' : 0, 'cmdRcv' : 0, 'entriesDel' : 0, 'entriesAdd' : 0, 'fwd': 0}
-		
+	
+	def defaultCost (self, graph):
+		return 1.0
 
 	def read(self, data):
 		"""
@@ -31,41 +34,20 @@ class RoutingLayer(NetworkLayer):
 			self.readCB(data)
 
 
-	def _ageTable(self):
+	def addLink(self, id1, id2, rad, addr):
+		self._networkGraph.add_edge(id1, id2, radio=rad, 
+				address=addr, time=0, 
+				weight=self.defaultCost(None))
 
-		toDelete = {}
+	def removeLink (self, rad, addr):
+		pass
 
-		for ID, radios in self._routingTable.iteritems():
-			for radio, attr in radios.iteritems():
-				if time.time() - attr['time'] > self._maxAge:
-					toDelete[ID] = radio
-
-		with self._tableLock:
-			for ID, radio in toDelete.iteritems():
-				del self._routingTable[ID][radio]
-				if self._commonData['logging']['inUse']:
-					self._commonData['logging']['routing']['entriesDel'] += 1
-
-				if not self._routingTable[ID]:
-					del self._routingTable[ID]
+	def addNode (self, theID):
+		self._routingTable.addNode(theID, root=False)
 
 		if self._commonData['logging']['inUse']:
-			logging.info('routing:' + self._getRoutes())
-
-		if self._runAging:
-			#reschedule for later only if runAging is true
-			threading.Timer(self._agingDelay, self._ageTable).start()
-		else:
-			self._agingStopped = True
-		#
-
-	def _getRoutes(self):
-		"""
-		Return the routing table in a nice format
-
-		DEBUG function
-		"""
-		return json.dumps(self._routingTable, sort_keys=True, indent=4, separators=(',', ': '))
+			self._commonData['logging']['routing']['entriesAdd'] += 1
+		
 
 
 	def _handlePing(self, msg):
@@ -73,19 +55,22 @@ class RoutingLayer(NetworkLayer):
 		Use the ping to update the routing table
 		
 		"""
-		#pdb.set_trace()
 
 		if self._commonData['logging']['inUse']:
 			self._commonData['logging']['routing']['pingsRcv'] += 1
-		self._updateRoutingTable(msg)
 
-		return msg
+		self._updateRoutingTable(msg)
+	#
 
 	def _isPing(self, msg):
 		try:
 			return msg["type"] == "ping"
 		except KeyError:
 			return False
+	#
+
+	def setCostFunction (self, costFunction):
+		self._costFunction = costFunction
 
 	def _updateRoutingTable(self, msg):
 		"""
@@ -98,14 +83,14 @@ class RoutingLayer(NetworkLayer):
 		#another node's network graph
 
 		if msg['src'] not in self._networkGraph:
-			self._routingTable.addNode(msg['src'], root=False)
-			if self._commonData['logging']['inUse']:
-				self._commonData['logging']['routing']['entriesAdd'] += 1
+			self.addNode (msg['src'])
 
 		if msg['radio'] not in self._networkGraph.edges():
-			self._networkGraph.add_edge(self._commonData['id'], msg['src'], radio=msg['radio'], addr=msg['sentby'], time=0)
+			self.addLink(self._commonData['id'], msg['src'], msg['radio'],msg['sentby'])
+
 
 		self._networkGraph.edges[self._commonData['id'], msg['src']]['time'] = time.time()
+		self._networkGraph.edges[self._commonData['id'], msg['src']]['weight'] = self._costFunction(self._networkGraph.copy(as_view=True))
 	#
 
 	def _needsForward(self, msg):
@@ -116,11 +101,13 @@ class RoutingLayer(NetworkLayer):
 			return msg['dest'] != self._commonData['id'] and msg['src'] != self._commonData['id']
 		except KeyError:
 			return False
+	#
 
 	def _handleForward(self, msg):
 		if self._commonData['logging']['inUse']:
 			self._commonData['logging']['routing']['fwd'] += 1
 		self.write(msg)
+	#
 
 	def _route(self, msg):
 		"""
@@ -133,8 +120,12 @@ class RoutingLayer(NetworkLayer):
 		#https://stackoverflow.com/questions/15644684/best-practices-for-querying-graphs-by-edge-and-node-attributes-in-networkx
 		#red = ((u,v) for u,v,d in G.edges(data=True) if d['color']=='red')
 		
-		for radio in self._commonData['activeRadios']
-			
+		radioList = []
+		for radio in msg['radios']
+			radioList += ([d['radio'], d['addr']] for u,v,d in self._networkGraph.edges(data=True) if d['radio'] == radio)
+		
+		msg['radios'] = radioList
+
 		return msg
 
 	def write(self, msg):
@@ -148,18 +139,5 @@ class RoutingLayer(NetworkLayer):
 			if self._commonData['logging']['inUse']:
 				self._commonData['logging']['routing']['msgSnt'] += 1
 			return self.writeCB(self._route(msg))
-
-
-	def _handleCommmand(self, msg):
-		"""
-		Pass message containing a command of to the appropriate
-		callback
-		"""
-		try:
-			self._cmdHandler(msg)
-		except Exception as e:
-			raise e
-		finally:
-			return msg
-
+	#
 #

@@ -1,18 +1,13 @@
+from comlocal.util.NetworkLayer import NetworkLayer
 
 
-class MessageLayer(object):
+class MessageLayer(NetworkLayer):
 	def __init__(self, commonData):
 		self._commonData = commonData
 		self._msgId = 0
 
-	def setRead(self, cb):
-		self._readCB = cb
-
-	def read(self):
-		return self._readCB()
-
-	def setWrite(self, cb):
-		self._writeCB = cb
+	def read(self, data):
+		self.readCB( data)
 
 	def _addMsgId(self, msg):
 		"""
@@ -26,9 +21,9 @@ class MessageLayer(object):
 	def write(self, msg):
 		try:
 			if 'msg' in msg['type'] and 'msg' in msg and 'dest' in msg:
-				return self._writeCB(self._addMsgId(msg))
+				return self.writeCB(self._addMsgId(msg))
 			elif 'cmd' in msg['type'] and 'cmd' in msg:
-				return self._writeCB(msg)
+				return self.writeCB(msg)
 			else:
 				raise KeyError
 		except KeyError:
