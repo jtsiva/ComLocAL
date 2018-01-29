@@ -15,7 +15,10 @@ class Radio(object):
 		self.available = True #if there is something wrong below, we can change this
 
 	def __eq__(self,other):
-		return self._name == other._name
+		if isinstance(other, Radio):
+			return self._name == other._name
+		elif isinstance(other, string):
+			return self._name == other
 
 	def __hash__(self):
 		return hash(self._name)
@@ -129,6 +132,18 @@ class ConnectionLayer(NetworkLayer):
 
 	def removeRadio(self, name):
 		self.radios.remove(name)
+
+	def isRadio (self, port):
+		for radio in self.radios:
+			if radio._port == port:
+				return True
+
+		return False
+
+	def directCommTo(self, message, port):
+		for radio in self.radios:
+			if radio._port == port:
+				radio.read(message)
 
 	def ping(self, extra = None):
 		if self._commonData['logging']['inUse']:

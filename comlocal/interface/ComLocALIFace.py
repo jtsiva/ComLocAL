@@ -26,10 +26,11 @@ class ComLocAL(object):
 			{
 				"type" : <"msg" | "cmd">,
 				<"msg" | "cmd"> : <stuff>,
-				("dest" : <id>) <-
-			}                    |
-			                     |
-			                     - only necessary when type == msg
+				("dest" : <id>),           <-
+				("app" : <4-char-app-code) <-
+			}                               |
+			                                |
+			                                - only necessary when type == msg
 
 		The currently available commands are:
 			getNeighbors - returns a list of ids of nodes within 1 hop
