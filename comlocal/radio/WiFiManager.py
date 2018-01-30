@@ -69,7 +69,6 @@ class WiFiManagerProtocol(DatagramProtocol):
 		#if the RadioManager responded then we don't need to keep
 		#checking
 		if self._service._registered:
-			from twisted.internet import reactor
 			self._later.stop()
 		else:
 			self.sendRegistration()
@@ -117,7 +116,10 @@ class WiFiManagerProtocol(DatagramProtocol):
 				message = json.loads(data)
 				if '127.0.0.1' == host:
 					if 'msg' == message['type'] and self._service._registered:
-						self.transport.write(data, ('<broadcast>', self._service._port))
+						addr = message['addr']
+						del message['addr']
+						data = json.dumps(message, separators=(',', ':'))
+						self.transport.write(data, (addr, self._service._port))
 					elif 'cmd' == message['type']:
 						response = self._service.handleCmd(message)
 						if response is not None:

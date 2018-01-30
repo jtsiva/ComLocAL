@@ -6,11 +6,12 @@ import time
 
 class RoutingLayer(NetworkLayer):
 	def __init__(self, commonData):
+		NetworkLayer.__init__(self, 'RL')
 		self._commonData = commonData
-		self._costFunction = defaultCost
+		self._costFunction = self.defaultCost
 		self._networkGraph = nx.MultiGraph()
 
-		self._networkGraph.addNode(self._commonData['id'], root=True)
+		self._networkGraph.add_node(self._commonData['id'], root=True)
 
 		if self._commonData['logging']['inUse']:
 			self._commonData['logging']['routing'] = {'pingsRcv' : 0, 'msgSnt': 0, 'msgRcv' : 0, 'cmdRcv' : 0, 'entriesDel' : 0, 'entriesAdd' : 0, 'fwd': 0}
@@ -43,7 +44,7 @@ class RoutingLayer(NetworkLayer):
 		pass
 
 	def addNode (self, theID):
-		self._routingTable.addNode(theID, root=False)
+		self._networkGraph.add_node(theID, root=False)
 
 		if self._commonData['logging']['inUse']:
 			self._commonData['logging']['routing']['entriesAdd'] += 1
@@ -121,8 +122,8 @@ class RoutingLayer(NetworkLayer):
 		#red = ((u,v) for u,v,d in G.edges(data=True) if d['color']=='red')
 		
 		radioList = []
-		for radio in msg['radios']
-			radioList += ([d['radio'], d['addr']] for u,v,d in self._networkGraph.edges(data=True) if d['radio'] == radio)
+		for radio in msg['radios']:
+			radioList += ([d['radio'], d['address']] for u,v,d in self._networkGraph.edges(data=True) if d['radio'] == radio)
 		
 		msg['radios'] = radioList
 
@@ -130,15 +131,19 @@ class RoutingLayer(NetworkLayer):
 
 
 	def write(self, msg):
-		if  msg['type'] == "cmd":
-			if msg['cmd'] == 'get_neighbors':
-				msg['result'] = self._networkGraph.neighbors(self._commonData['id'])
-				return msg
+		try:
+			if  msg['type'] == "cmd":
+				if msg['cmd'] == 'get_neighbors':
+					msg['result'] = self._networkGraph.neighbors(self._commonData['id'])
+					return msg
+				else:
+					return self.writeCB(msg)
 			else:
-				return self.writeCB(msg)
-		else:
-			if self._commonData['logging']['inUse']:
-				self._commonData['logging']['routing']['msgSnt'] += 1
-			return self.writeCB(self._route(msg))
+				if self._commonData['logging']['inUse']:
+					self._commonData['logging']['routing']['msgSnt'] += 1
+				return self.writeCB(self._route(msg))
+		except Exception as e:
+			msg['result'] = self.failure(str(e))
+			return msg
 	#
 #

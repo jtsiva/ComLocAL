@@ -3,7 +3,7 @@ import time
 import json
 
 class Radio(object):
-	broadcastAddr = ='<broadcast>'
+	broadcastAddr ='<broadcast>'
 
 	def __init__ (self, name, port):
 		self._connections = {Radio.broadcastAddr : 0}
@@ -17,11 +17,17 @@ class Radio(object):
 	def __eq__(self,other):
 		if isinstance(other, Radio):
 			return self._name == other._name
-		elif isinstance(other, string):
+		elif isinstance(other, str):
 			return self._name == other
 
 	def __hash__(self):
 		return hash(self._name)
+
+	def getName(self):
+		return self._name
+
+	def getPort(self):
+		return self._port
 
 	def setReadCB (self, cb):
 		self._readCB = cb
@@ -29,7 +35,7 @@ class Radio(object):
 	def setWriteCB (self, cb):
 		self._writeCB = cb
 
-	def ping(self, connection = Radio.broadcastAddr, extra = None):
+	def ping(self, connection = broadcastAddr, extra = None):
 		data = {'type':'ping'}
 
 		data['addr'] = connection
@@ -73,7 +79,8 @@ class Radio(object):
 
 		if data['addr'] not in self._connections:
 			self.addConnection(data['addr'])
-		self._writeCB(data)
+
+		return self._writeCB(data)
 
 	def connectionThreshold (self, cutoff):
 		#delete connections that have been idle longer than cutoff
@@ -94,14 +101,14 @@ class ConnectionLayer(NetworkLayer):
 	"""
 
 	def __init__(self, commonData):
-		NetworkLayer.__init__()
+		NetworkLayer.__init__(self, 'CL')
 		self._commonData = commonData
 		self.radios = set()
 		self._connectionPolicy = None
 		self.checkRadios() #weed out any radios that are not *actually* active
 		
 		#TODO: decide if I need this
-		#self._commonData['activeRadios'] = [radio._name for radio in self._radioList] #initialize commonData
+		#self._commonData['activeRadios'] = [radio._name for radio in self.radios] #initialize commonData
 	
 		if self._commonData['logging']['inUse']:
 			self._commonData['logging']['connection'] = {'pings' : 0, 'sent': 0, 'received' : 0}
@@ -132,6 +139,20 @@ class ConnectionLayer(NetworkLayer):
 
 	def removeRadio(self, name):
 		self.radios.remove(name)
+
+	def getRadio(self, name):
+		for radio in self.radios:
+			if radio.getName() == name:
+				return radio
+
+		return None
+
+
+	def getRadioNames(self):
+		return [rad.getName() for rad in self.radios]
+
+	def getRadioPorts(self):
+		return [rad.getPort() for rad in self.radios]
 
 	def isRadio (self, port):
 		for radio in self.radios:
@@ -176,14 +197,30 @@ class ConnectionLayer(NetworkLayer):
 
 		return true if successful, false otherwise
 		"""
+		ret = []
+		try:
+			#if we don't recognize a command by the time it gets to the bottom
+			#of the stack then we can finally say we don't recognize it
+			if 'cmd' in msg:
+				msg['result'] = self.failure("unrecognized command %s" % cmd['cmd'])
+				return msg
 
-		for radio, addr in msg['radios']:
-			if radio in self.radios:
-				msg['addr'] = addr
-				if self._commonData['logging']['inUse']:
-					self._commonData['logging']['connection']['sent'] += 1
-				
-				ret = radio.write(msg)
+			for radio, addr in msg['radios']:
+				if radio in self.getRadioNames():
+					rad = self.getRadio(radio)
+					msg['addr'] = addr
+					if self._commonData['logging']['inUse']:
+						self._commonData['logging']['connection']['sent'] += 1
+					
+					ret.append(rad.write(msg))
+
+			if not ret:
+				msg['result'] = self.failure("something is wrong--nothing happened")
+				ret.append(msg)
+		except Exception as e:
+			msg['result'] = self.failure(str(e))
+			ret.append(msg)
+
 		return ret
 
 		

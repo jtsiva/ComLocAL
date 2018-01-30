@@ -1,8 +1,15 @@
 
 class NetworkLayer (object):
-	def __init__ (self):
+	def __init__ (self, name):
+		self.name = name
 		self.readCB = None
 		self.writeCB = None
+
+	def failure(self, msg):
+		return "(" + self.name + ") failure: " + msg
+
+	def success(self, msg):
+		return "(" + self.name + ") success: " + msg
 	
 	def	setReadCB (self, cb):
 		"""

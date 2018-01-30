@@ -3,6 +3,7 @@ from comlocal.util.NetworkLayer import NetworkLayer
 
 class MessageLayer(NetworkLayer):
 	def __init__(self, commonData):
+		NetworkLayer.__init__(self, 'ML')
 		self._commonData = commonData
 		self._msgId = 0
 
@@ -11,7 +12,7 @@ class MessageLayer(NetworkLayer):
 
 	def _addMsgId(self, msg):
 		"""
-		Add semi-unique msg ID to message so that
+		Add msg ID to message so that
 		messages can be properly filtered by receivers
 		"""
 		msg['msgId'] = self._msgId
@@ -20,12 +21,12 @@ class MessageLayer(NetworkLayer):
 
 	def write(self, msg):
 		try:
-			if 'msg' in msg['type'] and 'msg' in msg and 'dest' in msg:
+			if 'msg' == msg['type'] and 'msg' in msg and 'dest' in msg:
 				return self.writeCB(self._addMsgId(msg))
-			elif 'cmd' in msg['type'] and 'cmd' in msg:
+			elif 'cmd' == msg['type'] and 'cmd' in msg:
 				return self.writeCB(msg)
 			else:
 				raise KeyError
 		except KeyError:
-			msg['result'] = 'failed: poorly formed message'
+			msg['result'] = self.failure('poorly formatted message')
 			return msg

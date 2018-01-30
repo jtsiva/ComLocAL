@@ -12,8 +12,11 @@ import json
 
 
 class ComService(service.Service, NetworkLayer):
-	def __init__(self, log = False, configFile = None):
+	broadcastSinkID = -1
 
+	def __init__(self, log = False, configFile = None, authFile = None):
+		NetworkLayer.__init__(self, 'Com')
+		self._authFile = authFile
 		self._registeredApplications = {}
 
 		self._commonData = {}
@@ -21,6 +24,8 @@ class ComService(service.Service, NetworkLayer):
 
 		self._CL = ConnectionLayer.ConnectionLayer(self._commonData)
 		self._RL = RoutingLayer.RoutingLayer(self._commonData)
+		self._RL.addNode(ComService.broadcastSinkID)
+
 		self._ML = MessageLayer.MessageLayer(self._commonData)
 
 		#add radios (will also track ports)
@@ -38,7 +43,12 @@ class ComService(service.Service, NetworkLayer):
 	#
 
 	def isApplication(self, port):
-		pass
+		for key in self._registeredApplications:
+			if self._registeredApplications[key] == port:
+				return True
+
+		return False
+
 
 	def isRadio(self, port):
 		return self._CL.isRadio(port)
@@ -47,10 +57,26 @@ class ComService(service.Service, NetworkLayer):
 		self._CL.directCommTo(message, port)
 
 	def directCommToStack (self, message):
+		if 'msg' in message:
+			message['radios'] = self.chooseRadios()
 		return self._ML.write(message)
+
+	def chooseRadios(self):
+		"""
+		TODO: radio selection scheme. Make more intelligent
+
+		Maybe RL can override decision?
+		"""
+		return self._CL.getRadioNames()
 
 	def startService (self):
 		service.Service.startService(self)
+		if self._authFile is not None:
+			self._authKey = open(self._authFile).read()
+			log.msg('loaded auth key from: %s' % (self._authFile,))
+		else:
+			self._authKey = ''
+			log.msg ('no file from which to load auth key')
 
 
 	def _initCommonData(self, log, configFile):
@@ -74,18 +100,22 @@ class ComService(service.Service, NetworkLayer):
 			if 'reg_app' == cmd['cmd']:
 				#only use 4 char for name (just in case they sent more)
 				self._registeredApplications[cmd['name'][:4]] = cmd['port']
-				cmd['result'] = "success"
-			else:
-				cmd['result'] = "failed : unrecognized command %s" % cmd['cmd']
+				cmd['result'] = self.success('')
+			# else:
+			# 	cmd['result'] = self.failure("unrecognized command %s" % cmd['cmd'])
 
 		except KeyError:
-			cmd['result'] = "failed: poorly formed message"
+			cmd['result'] = self.failure("poorly formed message")
 
 		return cmd
 
 	
-	def setupRadios (self, message):
-		pass
+	def setupRadios (self, radios):
+		for key,val in radios.iteritems():
+			if not self._CL.isRadio(val['port']):
+				self._CL.addRadio(key,val['port'])
+				self._RL.addLink(self._commonData['id'], ComService.broadcastSinkID, 
+									key, ConnectionLayer.Radio.broadcastAddr)
 
 	def read(self, msg):
 		self.readCB(msg)
@@ -93,7 +123,7 @@ class ComService(service.Service, NetworkLayer):
 	def write(self, msg):
 		port = msg['radio']
 		del msg['radio']
-		self.writeCB(msg, port)
+		return self.writeCB(msg, port)
 #
 
 class ComProtocol(DatagramProtocol):
@@ -112,51 +142,71 @@ class ComProtocol(DatagramProtocol):
 		log.msg('Checking RadioManager for available radios')	
 
 	def startProtocol (self):
-		#give the other service three seconds to start up
+		#give the other service a few seconds to start up
 		from twisted.internet import reactor
 		self._later = task.LoopingCall (self.checkRegisteredRadios)
-		task.deferLater(reactor, 5.0, self._later.start, 15.0) #check every 15 seconds
+		task.deferLater(reactor, 5.0, self._later.start, 30.0) #check every 30 seconds
 
 	def stackRead(self, msg):
 		#if the key 'app' doesn't exist then the message is copied to all
 		#registered applications
 		data = json.dumps(msg, separators=(',', ':'))
 		if 'app' in msg:
-			self.transport.write(data, ('127.0.0.1', self._service.registeredApplications[msg['app']]))
+			self.transport.write(data, ('127.0.0.1', self._service._registeredApplications[msg['app']]))
 		else:
-			for key, val in self._service.registeredApplications.itertools():
+			for key, val in self._service._registeredApplications.iteritems():
 				self.transport.write(data, ('127.0.0.1', val))
 
 
 	def stackWrite(self, msg, port):
 		#Send to the appropriate radio to *actually* send somewhere
-		data = json.dumps(msg, separators=(',', ':'))
-		self.transport.write(data, ('127.0.0.1', port))
+		try:
+			data = json.dumps(msg, separators=(',', ':'))
+			self.transport.write(data, ('127.0.0.1', port))
+			msg['result'] = self._service.success('')
+		except Exception as e:
+			msg['result'] = self._service.failure(str(e))
+
+		return msg
 
 	def datagramReceived(self, data, (host, port)):
-		message = json.loads(data)
-		result = None
+		
 		try:
+			result = {}
+			message = json.loads(data)
+			
 			if RadioManagerProtocol.myPort == port:
 				if 'fail' not in message['result']:
 					self._service.setupRadios(message['result'])
+					log.msg(message['result'])
 				else:
 					log.msg(message['result'])
+				return #nowhere to write!
 			elif self._service.isApplication(port):
 				result = self._service.directCommToStack(message)
 			elif self._service.isRadio(port):
 				self._service.directCommToRadio(message, port)
 			else:
 				if 'cmd' == message['type']:
+					log.msg(result)
 					message['port'] = port
 					result = self._service.handleCmd(message)
+
+					#We couldn't handle the command so send to the stack
+					if 'result' not in result: 
+						result = self._service.directCommToStack(message)
 				else:
 					result = message
-					result['result'] = 'failed: unknown sender. register app with service'
-		except KeyError:
-			result['result'] = 'failed: poorly formatted message'
+					result['result'] = self._service.failure('unknown sender. register app with service')
 
-		self.transport.write(result, (host,port))
+		except KeyError:
+			result['result'] = self._service.failure('poorly formatted message')
+		except Exception as e:
+			result['result'] = self._service.failure(str(e))
+
+		log.msg(result)
+		data = json.dumps(result, separators=(',', ':'))
+		self.transport.write(data, (host,port))
 
 
 

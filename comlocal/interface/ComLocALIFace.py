@@ -2,6 +2,12 @@ from twisted.application import internet, service
 from twisted.internet.protocol import ServerFactory, DatagramProtocol
 from threading import Thread
 
+from comlocal.radio.RadioManager import RadioManager
+
+#Twisted and threading
+#https://stackoverflow.com/questions/2243266/threads-in-twisted-how-to-use-them-properly
+#http://twistedmatrix.com/documents/13.0.0/core/howto/threading.html
+
 
 class ComLocAL(object):
 	def __init__(self):
@@ -40,11 +46,12 @@ class ComLocAL(object):
 			{
 				"type" : <"msg" | "cmd">,
 				<"msg" | "cmd"> : <stuff>,
-				("dest" : <id>),           <-
-				("app" : <4-char-app-code) <-
+				("dest" : <id>)            <-
 			}                               |
 			                                |
 			                                - only necessary when type == msg
+
+			    ("app" : <4-char-app-code>) <- don't really need because started with name
 
 		The currently available commands are:
 			get_neighbors - returns a list of ids of nodes within 1 hop
@@ -78,14 +85,13 @@ class ComLocALProtocol(DatagramProtocol)
 		regPacket['type'] = 'cmd'
 		regPacket['cmd'] = 'reg_app'
 		regPacket['name'] = self._name
-		self.transport.write(json.dumps(regPacket), ('127.0.0.1', radioMgrPort))
-		log.msg('registering with RadioManager')	
+		self.transport.write(json.dumps(regPacket), ('127.0.0.1', RadioManager.myPort))
+		#og.msg('registering with Com')	
 
 	def checkRegistration (self):
-		#if the RadioManager responded then we don't need to keep
+		#if the Com stack responded then we don't need to keep
 		#checking
 		if self._registered:
-			from twisted.internet import reactor
 			self._later.stop()
 		else:
 			self.sendRegistration()
@@ -100,6 +106,7 @@ class ComLocALProtocol(DatagramProtocol)
 
 	def comWrite(self, msg):
 		if self._registered:
+			msg['app'] = self._name
 			data = json.dumps(msg, separators=(',', ':'))
 			self.transport.write(data, ('127.0.0.1', 10257))
 
