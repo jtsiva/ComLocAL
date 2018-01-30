@@ -63,7 +63,7 @@ class WiFiManagerProtocol(DatagramProtocol):
 		regPacket['name'] = 'WiFi'
 		regPacket['props'] = self._props
 		self.transport.write(json.dumps(regPacket), ('127.0.0.1', radioMgrPort))
-		log.msg('registering with RadioManager')	
+		log.msg('registering with RadioManager')
 
 	def checkRegistration (self):
 		#if the RadioManager responded then we don't need to keep

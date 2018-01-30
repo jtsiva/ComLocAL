@@ -1,8 +1,9 @@
 from twisted.application import internet, service
+from twisted.internet import task
 from twisted.internet.protocol import ServerFactory, DatagramProtocol
 from threading import Thread
 
-from comlocal.radio.RadioManager import RadioManager
+from comlocal.radio.RadioManager import RadioManagerProtocol
 
 #Twisted and threading
 #https://stackoverflow.com/questions/2243266/threads-in-twisted-how-to-use-them-properly
@@ -16,6 +17,7 @@ class ComLocAL(object):
 		self.resultCB = None # called when write completes (includes commands)
 		self.locationCB = None # called if periodic location updates are desired
 		self.period = 1.0 #used for periodic location updates
+		self.isStarted = False
 
 	def start(self, name):
 		from twisted.internet import reactor
@@ -23,10 +25,12 @@ class ComLocAL(object):
 		reactor.listenUDP(10267, self.comlocalProto)
 		#reactor.addSystemEventTrigger('during','shutdown', self.stop)
 		Thread(target=reactor.run, args=(False,)).start()
+		self.isStarted = True
 
 	def stop(self):
-		from twisted.internet import reactor
-		reactor.stop()
+		if self.isStarted:
+			from twisted.internet import reactor
+			reactor.stop()
 
 	def setReadCB (self, cb):
 		self.readCB = cb
@@ -74,7 +78,7 @@ class ComLocAL(object):
 # 	def startService (self):
 # 		service.Service.startService(self)
 
-class ComLocALProtocol(DatagramProtocol)
+class ComLocALProtocol(DatagramProtocol):
 	def __init__(self, obj, name):
 		self._obj = obj
 		self._name = name
