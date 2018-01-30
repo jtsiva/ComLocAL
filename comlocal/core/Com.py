@@ -72,7 +72,7 @@ class ComService(service.Service, NetworkLayer):
 	def handleCmd(self, cmd):
 		try:
 			if 'reg_app' == cmd['cmd']:
-
+				#only use 4 char for name (just in case they sent more)
 				self._registeredApplications[cmd['name'][:4]] = cmd['port']
 				cmd['result'] = "success"
 			else:

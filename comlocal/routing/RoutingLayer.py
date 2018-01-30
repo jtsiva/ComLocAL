@@ -128,9 +128,10 @@ class RoutingLayer(NetworkLayer):
 
 		return msg
 
+
 	def write(self, msg):
 		if  msg['type'] == "cmd":
-			if msg['cmd'] == 'getNeighbors':
+			if msg['cmd'] == 'get_neighbors':
 				msg['result'] = self._networkGraph.neighbors(self._commonData['id'])
 				return msg
 			else:
