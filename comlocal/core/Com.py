@@ -209,9 +209,6 @@ class ComProtocol(DatagramProtocol):
 
 		log.msg(result)
 
-		#CHECK IF RESULT IS A LIST AND THEN SEND EACH MESSAGE INDIVIDUALLY?
-		#OR ONLY EVER GET ONE RESULT?
-
 		data = json.dumps(result, separators=(',', ':'))
 		self.transport.write(data, (host,port))
 
@@ -220,11 +217,11 @@ class ComProtocol(DatagramProtocol):
 
 port = ComProtocol.myPort
 iface = "127.0.0.1"
-configFile = None
+configFile = 'default.conf'
 
 topService = service.MultiService()
 
-comService = ComService(port)
+comService = ComService(port, configFile=configFile)
 comService.setServiceParent(topService)
 
 udpService = internet.UDPServer(port, ComProtocol(comService))
