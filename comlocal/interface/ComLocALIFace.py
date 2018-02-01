@@ -1,9 +1,17 @@
 from twisted.application import internet, service
 from twisted.internet import task
 from twisted.internet.protocol import ServerFactory, DatagramProtocol
-from threading import Thread
+from twisted.internet.defer import Deferred
+from twisted.internet import reactor
+from twisted.python import log
 
-from comlocal.radio.RadioManager import RadioManagerProtocol
+from comlocal.core.Com import ComProtocol
+import pdb
+import sys
+import json
+
+from crochet import wait_for, run_in_reactor, setup
+setup()
 
 #Twisted and threading
 #https://stackoverflow.com/questions/2243266/threads-in-twisted-how-to-use-them-properly
@@ -11,36 +19,16 @@ from comlocal.radio.RadioManager import RadioManagerProtocol
 
 
 class ComLocAL(object):
-	def __init__(self):
+	def __init__(self, name):
+		self.name = name
 		self.comlocalProto = None
 		self.readCB = None # called when data arrives
 		self.resultCB = None # called when write completes (includes commands)
 		self.locationCB = None # called if periodic location updates are desired
 		self.period = 1.0 #used for periodic location updates
-		self.isStarted = False
-
-	def start(self, name):
-		from twisted.internet import reactor
-		self.comlocalProto = ComLocALProtocol(self, name)
-		reactor.listenUDP(10267, self.comlocalProto)
-		#reactor.addSystemEventTrigger('during','shutdown', self.stop)
-		Thread(target=reactor.run, args=(False,)).start()
-		self.isStarted = True
-
-	def stop(self):
-		if self.isStarted:
-			from twisted.internet import reactor
-			reactor.stop()
-
-	def setReadCB (self, cb):
-		self.readCB = cb
-
-	def setResultCB (self, cb):
-		self.resultCB = cb
-
-	def setLocationCB (self, cb, period):
-		self.locationCB = cb
-		self.period = period
+		# self.writeDeferred = Deferred()
+		# self.stopDeferred = Deferred()
+		#log.startLogging(open('local.log', 'w'))
 
 	def comWrite(self, msg):
 		"""
@@ -60,8 +48,42 @@ class ComLocAL(object):
 		The currently available commands are:
 			get_neighbors - returns a list of ids of nodes within 1 hop
 		"""
-		from twisted.internet import reactor
-		reactor.callFromThread(self.comlocalProto.comWrite, msg)
+		
+		#pdb.set_trace()
+		self.comlocalProto.comWrite(msg)
+	
+	#def stop(self):
+		
+		
+	# def getWriteAndStopFuncs(self):
+	# 	writeDeferred = Deferred()
+	# 	stopDeferred = Deferred()
+
+	# 	writeDeferred.addCallback(self.comWrite) #need to wrap in callFromThread?
+
+	# 	stopDeferred.addCallback(self.stop) #need to wrap in callFromThread?
+
+	# 	return writeDeferred, stopDeferred
+
+	#@run_in_reactor
+	def start(self):
+		self.comlocalProto = ComLocALProtocol(self, self.name)
+		reactor.listenUDP(10267, self.comlocalProto, interface='127.0.0.1')
+		#reactor.addSystemEventTrigger('during','shutdown', self.stop)
+		
+		
+
+		
+
+	def setReadCB (self, cb):
+		self.readCB = cb
+
+	def setResultCB (self, cb):
+		self.resultCB = cb
+
+	def setLocationCB (self, cb, period):
+		self.locationCB = cb
+		self.period = period
 
 	def locWrite(self, cmd):
 		"""
@@ -84,14 +106,16 @@ class ComLocALProtocol(DatagramProtocol):
 		self._name = name
 		self._registered = False
 
+	@run_in_reactor
 	def sendRegistration (self):
 		regPacket = {}
 		regPacket['type'] = 'cmd'
 		regPacket['cmd'] = 'reg_app'
 		regPacket['name'] = self._name
-		self.transport.write(json.dumps(regPacket), ('127.0.0.1', RadioManager.myPort))
-		#og.msg('registering with Com')	
+		self.transport.write(json.dumps(regPacket), ('127.0.0.1', ComProtocol.myPort))
+		log.msg('registering with Com')	
 
+	@run_in_reactor
 	def checkRegistration (self):
 		#if the Com stack responded then we don't need to keep
 		#checking
@@ -100,24 +124,26 @@ class ComLocALProtocol(DatagramProtocol):
 		else:
 			self.sendRegistration()
 
+	@run_in_reactor
 	def startProtocol (self):
-
 		#give the other service three seconds to start up
-		from twisted.internet import reactor
+		#from twisted.internet import reactor
 		self._later = task.LoopingCall (self.checkRegistration)
-		task.deferLater(reactor, 3.0, self.sendRegistration)
+		self.sendRegistration()
 		task.deferLater(reactor, 5.0, self._later.start, 5.0)
 
+	@run_in_reactor
 	def comWrite(self, msg):
 		if self._registered:
 			msg['app'] = self._name
 			data = json.dumps(msg, separators=(',', ':'))
-			self.transport.write(data, ('127.0.0.1', 10257))
+			self.transport.write(data, ('127.0.0.1', ComProtocol.myPort))
 
 	def datagramReceived(self, data, (host, port)):
 		message = json.loads(data)
+		log.msg(message)
 		if 'cmd' == message['type'] and 'reg_app' == message['cmd']:
-			if 'success' == message['result']:
+			if 'success' in message['result']:
 				self._registered = True
 			else:
 				#problem
@@ -125,9 +151,11 @@ class ComLocALProtocol(DatagramProtocol):
 
 			return
 
-		from twisted.internet import reactor
+		#from twisted.internet import reactor
 		if self._registered:
 			if 'result' in message:
-				reactor.callInThread(self._obj.resultCB, message)
+				#reactor.callInThread(self._obj.resultCB, message)
+				self._obj.resultCB(message)
 			else:
-				reactor.callInThread(self._obj.readCB, message)
+				#reactor.callInThread(self._obj.readCB, message)
+				self._obj.readCB(message)

@@ -1,4 +1,7 @@
-from comlocal.interface.ComLocALIFace import ComLocAL
+from comlocal.interface import ComLocALIFace
+
+from threading import Thread
+import pdb
 
 class myThing(object):
 	def __init__(self):
@@ -25,18 +28,20 @@ def formatCmd(cmd):
 
 def main():
 	thing = myThing()
-	myCom = ComLocAL()
+	myCom = ComLocALIFace.ComLocAL('DRON')
 	myCom.setReadCB (thing.reader)
 	myCom.setResultCB (thing.result)
 
 	try:
-		myCom.start('DRON')
+		myCom.start()
 		while True:
 			things = raw_input('> ')
-			myCom.comWrite(formatMsg(things))
-
-	finally:
-		myCom.stop()
+			#pdb.set_trace()
+			myCom.comWrite(formatMsg(things, 5))
+	except KeyboardInterrupt:
+		print ''
+	except Exception as e:
+		print e
 
 	print 'reads: %i, writes: %i, cmd: %i' % (thing.read, thing.writeRes, thing.cmdRes)
 

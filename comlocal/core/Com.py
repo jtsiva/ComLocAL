@@ -11,6 +11,7 @@ import random
 import json
 
 
+
 class ComService(service.Service, NetworkLayer):
 	broadcastSinkID = -1
 
@@ -59,6 +60,7 @@ class ComService(service.Service, NetworkLayer):
 	def directCommToStack (self, message):
 		if 'msg' in message:
 			message['radios'] = self.chooseRadios()
+			log.msg(message['radios'])
 		return self._ML.write(message)
 
 	def chooseRadios(self):
@@ -114,6 +116,7 @@ class ComService(service.Service, NetworkLayer):
 		for key,val in radios.iteritems():
 			if not self._CL.isRadio(val['port']):
 				self._CL.addRadio(key,val['port'])
+				self._RL.addNode(ComService.broadcastSinkID)
 				self._RL.addLink(self._commonData['id'], ComService.broadcastSinkID, 
 									key, ConnectionLayer.Radio.broadcastAddr)
 
@@ -127,6 +130,8 @@ class ComService(service.Service, NetworkLayer):
 #
 
 class ComProtocol(DatagramProtocol):
+	myPort = 10257
+
 	def __init__(self, service):
 		self._service = service
 		self._service.setReadCB(self.stackRead)
@@ -170,34 +175,32 @@ class ComProtocol(DatagramProtocol):
 		return msg
 
 	def datagramReceived(self, data, (host, port)):
-		
+		#log.msg(data)
 		try:
 			result = {}
 			message = json.loads(data)
 			
 			if RadioManagerProtocol.myPort == port:
-				if 'fail' not in message['result']:
+				if 'failure' not in message['result']:
 					self._service.setupRadios(message['result'])
 					log.msg(message['result'])
 				else:
-					log.msg(message['result'])
+					pass#log.msg(message['result'])
 				return #nowhere to write!
+			elif 'cmd' == message['type']:
+				message['port'] = port
+				result = self._service.handleCmd(message)
+
+				#We couldn't handle the command so send to the stack
+				if 'result' not in result: 
+					result = self._service.directCommToStack(message)
 			elif self._service.isApplication(port):
 				result = self._service.directCommToStack(message)
 			elif self._service.isRadio(port):
-				self._service.directCommToRadio(message, port)
+				self._service.directCommToRadio(message, port)	
 			else:
-				if 'cmd' == message['type']:
-					log.msg(result)
-					message['port'] = port
-					result = self._service.handleCmd(message)
-
-					#We couldn't handle the command so send to the stack
-					if 'result' not in result: 
-						result = self._service.directCommToStack(message)
-				else:
-					result = message
-					result['result'] = self._service.failure('unknown sender. register app with service')
+				result = message
+				result['result'] = self._service.failure('unknown sender. register app with service')
 
 		except KeyError:
 			result['result'] = self._service.failure('poorly formatted message')
@@ -205,13 +208,17 @@ class ComProtocol(DatagramProtocol):
 			result['result'] = self._service.failure(str(e))
 
 		log.msg(result)
+
+		#CHECK IF RESULT IS A LIST AND THEN SEND EACH MESSAGE INDIVIDUALLY?
+		#OR ONLY EVER GET ONE RESULT?
+
 		data = json.dumps(result, separators=(',', ':'))
 		self.transport.write(data, (host,port))
 
 
 
 
-port = 10257
+port = ComProtocol.myPort
 iface = "127.0.0.1"
 configFile = None
 

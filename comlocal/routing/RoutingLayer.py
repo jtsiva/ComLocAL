@@ -120,7 +120,6 @@ class RoutingLayer(NetworkLayer):
 
 		#https://stackoverflow.com/questions/15644684/best-practices-for-querying-graphs-by-edge-and-node-attributes-in-networkx
 		#red = ((u,v) for u,v,d in G.edges(data=True) if d['color']=='red')
-		
 		radioList = []
 		for radio in msg['radios']:
 			radioList += ([d['radio'], d['address']] for u,v,d in self._networkGraph.edges(data=True) if d['radio'] == radio)

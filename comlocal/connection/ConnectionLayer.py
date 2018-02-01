@@ -197,12 +197,12 @@ class ConnectionLayer(NetworkLayer):
 
 		return true if successful, false otherwise
 		"""
-		ret = []
+		everythingOkay = None
 		try:
 			#if we don't recognize a command by the time it gets to the bottom
 			#of the stack then we can finally say we don't recognize it
 			if 'cmd' in msg:
-				msg['result'] = self.failure("unrecognized command %s" % cmd['cmd'])
+				msg['result'] = self.failure("unrecognized command %s" % msg['cmd'])
 				return msg
 
 			for radio, addr in msg['radios']:
@@ -212,16 +212,22 @@ class ConnectionLayer(NetworkLayer):
 					if self._commonData['logging']['inUse']:
 						self._commonData['logging']['connection']['sent'] += 1
 					
-					ret.append(rad.write(msg))
+					ret = rad.write(msg)
+					if 'failure' in ret['result']:
+						everythingOkay = False
+						if 'result' not in msg:
+							msg['result'] = self.failure('')
 
-			if not ret:
-				msg['result'] = self.failure("something is wrong--nothing happened")
-				ret.append(msg)
+						msg['result'] += rad.getName() + ' '
+					else:
+						everythingOkay = True
+
+			if everythingOkay is None:
+				msg['result'] = self.failure("no radios registered")
 		except Exception as e:
 			msg['result'] = self.failure(str(e))
-			ret.append(msg)
 
-		return ret
+		return msg
 
 		
 
