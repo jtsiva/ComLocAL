@@ -15,12 +15,12 @@ class myThing(object):
 		self.readyToSend = False
 
 	def reader(self, msg):
-		#print msg
+		print msg
 		self.read += 1
 		readyToSend = True
 
 	def result(self, msg):
-		#print msg
+		print msg
 		if 'cmd' in msg:
 			self.cmdRes += 1
 		elif 'msg' in msg:
@@ -31,6 +31,8 @@ def main():
 	parser = argparse.ArgumentParser()
 	parser.add_argument ("-c", "--count", required = True, help="set the number messages that sender should send")
 	parser.add_argument ("-f", "--first", action="store_true", default=False, help="set whether this device will send first")
+	parser.add_argument ("-d", "--dest", required = True, help="set the destination for the message")
+
 
 	args =  parser.parse_args()
 
@@ -41,15 +43,17 @@ def main():
 
 	count = int(args.count)
 	readyToSend = args.first
+	dest = int(args.dest)
 
-	msg = {'type':'msg','msg':'hello'}
+	msg = {'type':'msg','msg':'hello','dest':dest}
 
 	try:
 		myCom.start()
 
 		while count > thing.writeRes:
-			if thing.readyToSend:# or (time.time() - last) > 3:
+			if readyToSend:# or (time.time() - last) > 3:
 				myCom.comWrite(msg)
+				readyToSend = False
 	except KeyboardInterrupt:
 		print ''
 	except Exception as e:
