@@ -46,21 +46,31 @@ class Radio(object):
 		self.write(data)
 
 	def getConnections (self):
+		#LOCK
 		return self._connections.copy()
+		#UNLOCK
 
 	def addConnection(self, connection):
+		#LOCK
 		if connection not in self._connections:
 			self._connections[connection] = time.time()
 			#self.ping (connection)
 			#TODO: add'l to set up connection
+		#UNLOCK
 
 	def removeConnection (self, connection):
-		del self._connections[connection]
+		#LOCK
+		if connection in self._connections:
+			del self._connections[connection]
+		#UNLOCK
+
 		#TODO: add'l to close connection
 
 	def read(self, data):
 		#add/remove fields from data
+		#LOCK
 		self._connections[data['sentby']] = time.time()
+		#UNLOCK
 		data['radio'] = self._name
 		self._readCB(data)
 
@@ -77,20 +87,21 @@ class Radio(object):
 		data = self._cleanOutoing(data)
 		data['radio'] = self._port
 
-		if data['addr'] not in self._connections:
-			self.addConnection(data['addr'])
+		self.addConnection(data['addr'])
 
 		return self._writeCB(data)
 
 	def connectionThreshold (self, cutoff):
 		#delete connections that have been idle longer than cutoff
 		toDelete = []
+		
 		for key, val in self._connections.iteritems():
-			if time.time() - val > cutoff:
+			if not val == 0 and time.time() - val > cutoff: #val is 0 for bcast only
 				toDelete.append(key)
 
 		for key in toDelete:
-			del self._connections[key]
+			self.removeConnection(key)
+		
 
 
 class ConnectionLayer(NetworkLayer):
@@ -131,33 +142,45 @@ class ConnectionLayer(NetworkLayer):
 			self._connectionPolicy(self.radios)
 
 	def addRadio(self, name, port):
+		#LOCK
 		newRad = Radio(name, port)
 		newRad.setReadCB(self.read)
 		newRad.setWriteCB(self.writeCB)
 		self.radios.add(newRad)
+		#UNLOCK
 
 
 	def removeRadio(self, name):
+		#LOCK
 		self.radios.remove(name)
+		#UNLOCK
 
 	def getRadio(self, name):
+		#LOCK
 		for radio in self.radios:
 			if radio.getName() == name:
 				return radio
+		#UNLOCK
 
 		return None
 
 
 	def getRadioNames(self):
+		#LOCK
 		return [rad.getName() for rad in self.radios]
+		#UNLOCK
 
 	def getRadioPorts(self):
+		#LOCK
 		return [rad.getPort() for rad in self.radios]
+		#UNLOCK
 
 	def isRadio (self, port):
+		#LOCK
 		for radio in self.radios:
 			if radio._port == port:
 				return True
+		#UNLOCK
 
 		return False
 
@@ -208,6 +231,7 @@ class ConnectionLayer(NetworkLayer):
 			for radio, addr in msg['radios']:
 				if radio in self.getRadioNames():
 					rad = self.getRadio(radio)
+
 					msg['addr'] = addr
 					if self._commonData['logging']['inUse']:
 						self._commonData['logging']['connection']['sent'] += 1

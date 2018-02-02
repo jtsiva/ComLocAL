@@ -15,12 +15,13 @@ class myThing(object):
 		self.readyToSend = False
 
 	def reader(self, msg):
-		print msg
 		self.read += 1
+		if self.read % 100 == 0:
+			print msg
 		readyToSend = True
 
 	def result(self, msg):
-		print msg
+		#print msg
 		if 'cmd' in msg:
 			self.cmdRes += 1
 		elif 'msg' in msg:

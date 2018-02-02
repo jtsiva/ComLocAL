@@ -151,11 +151,10 @@ class ComLocALProtocol(DatagramProtocol):
 
 			return
 
-		#from twisted.internet import reactor
 		if self._registered:
 			if 'result' in message:
-				#reactor.callInThread(self._obj.resultCB, message)
-				self._obj.resultCB(message)
+				reactor.callInThread(self._obj.resultCB, message)
+				#self._obj.resultCB(message)
 			else:
-				#reactor.callInThread(self._obj.readCB, message)
-				self._obj.readCB(message)
+				reactor.callInThread(self._obj.readCB, message)
+				#self._obj.readCB(message)

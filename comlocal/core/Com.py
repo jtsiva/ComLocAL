@@ -55,7 +55,7 @@ class ComService(service.Service, NetworkLayer):
 		return self._CL.isRadio(port)
 
 	def directCommToRadio(self, message, port):
-		log.msg('from radio ')
+		#log.msg('from radio ')
 		self._CL.directCommTo(message, port)
 
 	def directCommToStack (self, message):

@@ -19,6 +19,11 @@ class RoutingLayer(NetworkLayer):
 	def defaultCost (self, graph):
 		return 1.0
 
+	def callCostFunc (self):
+		#LOCK
+		self._costFunction(self._networkGraph.copy(as_view=True))
+		#UNLOCK
+
 	def read(self, data):
 		"""
 		To be used as a callback
@@ -36,15 +41,21 @@ class RoutingLayer(NetworkLayer):
 
 
 	def addLink(self, id1, id2, rad, addr):
+		#LOCK
 		self._networkGraph.add_edge(id1, id2, radio=rad, 
 				address=addr, time=0, 
 				weight=self.defaultCost(None))
+		#UNLOCK
 
 	def removeLink (self, rad, addr):
+		#LOCK
 		pass
+		#UNLOCK
 
 	def addNode (self, theID):
+		#LOCK
 		self._networkGraph.add_node(theID, root=False)
+		#UNLOCK
 
 		if self._commonData['logging']['inUse']:
 			self._commonData['logging']['routing']['entriesAdd'] += 1
@@ -83,6 +94,7 @@ class RoutingLayer(NetworkLayer):
 		#TODO: expand to handle adding whole paths or updating from
 		#another node's network graph
 
+		#LOCK
 		if msg['src'] not in self._networkGraph:
 			self.addNode (msg['src'])
 
@@ -91,7 +103,8 @@ class RoutingLayer(NetworkLayer):
 
 
 		self._networkGraph.edges[self._commonData['id'], msg['src']]['time'] = time.time()
-		self._networkGraph.edges[self._commonData['id'], msg['src']]['weight'] = self._costFunction(self._networkGraph.copy(as_view=True))
+		self._networkGraph.edges[self._commonData['id'], msg['src']]['weight'] = self.callCostFunc()
+		#UNLOCK
 	#
 
 	def _needsForward(self, msg):
@@ -121,9 +134,11 @@ class RoutingLayer(NetworkLayer):
 		#https://stackoverflow.com/questions/15644684/best-practices-for-querying-graphs-by-edge-and-node-attributes-in-networkx
 		#red = ((u,v) for u,v,d in G.edges(data=True) if d['color']=='red')
 		radioList = []
+		#LOCK
 		for radio in msg['radios']:
 			radioList += ([d['radio'], d['address']] for u,v,d in self._networkGraph.edges(data=True) if d['radio'] == radio)
-		
+		#UNLOCK
+
 		msg['radios'] = radioList
 
 		return msg
@@ -133,7 +148,9 @@ class RoutingLayer(NetworkLayer):
 		try:
 			if  msg['type'] == "cmd":
 				if msg['cmd'] == 'get_neighbors':
+					#LOCK
 					msg['result'] = self._networkGraph.neighbors(self._commonData['id'])
+					#UNLOCK
 					return msg
 				else:
 					return self.writeCB(msg)
