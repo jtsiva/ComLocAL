@@ -3,13 +3,15 @@ from twisted.internet import task
 from twisted.internet.protocol import ServerFactory, DatagramProtocol
 from twisted.python import log
 from comlocal.radio.RadioManager import RadioManagerProtocol
+from comlocal.util.NetworkLayer import NetworkLayer
 import socket
 import fcntl
 import struct
 import json
 
-class WiFiManagerService (service.Service):
+class WiFiManagerService (service.Service, NetworkLayer):
 	def __init__ (self, port, authFile = None):
+		NetworkLayer.__init__(self, 'WiFi')
 		self._port = port
 		self._localReceivers = []
 		self._authFile = authFile
@@ -30,16 +32,16 @@ class WiFiManagerService (service.Service):
 			if 'reg_local' == cmd['cmd']:
 				port = cmd['port']
 				self.addLocalReceiver(('127.0.0.1', port))
-				cmd['result'] = 'success'
+				cmd['result'] = self.success('')
 			elif 'reg_radio' == cmd['cmd'] and 'success' == cmd['result']:
 				self._registered = True
 				log.msg("Registered!")
 				return None
 			else:
-				cmd['result'] = "failed: no command %s" % (cmd['cmd'])
+				cmd['result'] = self.failure("no command %s" % (cmd['cmd']))
 
 		except KeyError:
-			cmd['result'] = 'failed'
+			cmd['result'] = self.failure('poorly formatted command (missing a field?)')
 
 		return json.dumps(cmd)
 
@@ -110,8 +112,9 @@ class WiFiManagerProtocol(DatagramProtocol):
 		task.deferLater(reactor, 5.0, self._later.start, 5.0)
 
 	def datagramReceived(self, data, (host, port)):
+		log.msg(data + " from %s %d" % (host, port))
 		if not host == self._props['addr']:
-			log.msg(data + " from %s %d" % (host, port))
+			
 			try:
 				message = json.loads(data)
 				if '127.0.0.1' == host:
@@ -121,6 +124,7 @@ class WiFiManagerProtocol(DatagramProtocol):
 						data = json.dumps(message, separators=(',', ':'))
 						self.transport.write(data, (addr, self._service._port))
 					elif 'cmd' == message['type']:
+						message['port'] = port
 						response = self._service.handleCmd(message)
 						if response is not None:
 							self.transport.write(response, (host, port))
@@ -128,6 +132,7 @@ class WiFiManagerProtocol(DatagramProtocol):
 					message['sentby'] = host
 					data = json.dumps(message)
 					for addr in self._service.getLocalReceivers():
+						log.msg('sending to %s,%d' % addr)
 						self.transport.write(data, addr)
 			except KeyError:
 				pass #drop poorly formed packets

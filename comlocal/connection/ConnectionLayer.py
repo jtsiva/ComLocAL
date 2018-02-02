@@ -215,10 +215,10 @@ class ConnectionLayer(NetworkLayer):
 					ret = rad.write(msg)
 					if 'failure' in ret['result']:
 						everythingOkay = False
-						if 'result' not in msg:
-							msg['result'] = self.failure('')
+						# if 'result' not in msg:
+						# 	msg['result'] = self.failure('')
 
-						msg['result'] += rad.getName() + ' '
+						msg['result'] += self.failure(rad.getName() + ' ')
 					else:
 						everythingOkay = True
 

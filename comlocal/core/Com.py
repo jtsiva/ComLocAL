@@ -55,12 +55,13 @@ class ComService(service.Service, NetworkLayer):
 		return self._CL.isRadio(port)
 
 	def directCommToRadio(self, message, port):
+		log.msg('from radio ')
 		self._CL.directCommTo(message, port)
 
 	def directCommToStack (self, message):
 		if 'msg' in message:
 			message['radios'] = self.chooseRadios()
-			log.msg(message['radios'])
+			#log.msg(message['radios'])
 		return self._ML.write(message)
 
 	def chooseRadios(self):
@@ -112,13 +113,12 @@ class ComService(service.Service, NetworkLayer):
 		return cmd
 
 	
-	def setupRadios (self, radios):
-		for key,val in radios.iteritems():
-			if not self._CL.isRadio(val['port']):
-				self._CL.addRadio(key,val['port'])
-				self._RL.addNode(ComService.broadcastSinkID)
-				self._RL.addLink(self._commonData['id'], ComService.broadcastSinkID, 
-									key, ConnectionLayer.Radio.broadcastAddr)
+	def setupRadio (self, radio, props):
+		if not self._CL.isRadio(props['port']):
+			self._CL.addRadio(radio,props['port'])
+			self._RL.addNode(ComService.broadcastSinkID)
+			self._RL.addLink(self._commonData['id'], ComService.broadcastSinkID, 
+								radio, ConnectionLayer.Radio.broadcastAddr)
 
 	def read(self, msg):
 		self.readCB(msg)
@@ -136,6 +136,40 @@ class ComProtocol(DatagramProtocol):
 		self._service = service
 		self._service.setReadCB(self.stackRead)
 		self._service.setWriteCB(self.stackWrite)
+		self.radiosToVerify = {}
+
+	def radioToVerify(self,port):
+		for radio, props in self.radiosToVerify.iteritems():
+			if props['port'] == port:
+				return True
+
+		return False
+
+	def popRadio(self,port):
+		retval = None
+		for radio, props in self.radiosToVerify.iteritems():
+			if props['port'] == port:
+				retval = (radio, props)
+
+		if retval is not None:
+			del self.radiosToVerify[retval[0]]
+
+		return retval
+
+
+	def registerWithRadios(self):
+		if self.radiosToVerify:
+			regPacket = {}
+			regPacket['type'] = 'cmd'
+			regPacket['auth'] = self._service._authKey
+			regPacket['cmd'] = 'reg_local'
+
+			for radio, props in self.radiosToVerify.iteritems():
+				log.msg('registering with %s at (%s, %d)' % (radio, props['addr'], props['port']))
+				self.transport.write(json.dumps(regPacket), ('127.0.0.1', props['port']))
+		else:
+			self._laterRads.stop()
+
 
 	def checkRegisteredRadios (self):
 		regPacket = {}
@@ -175,18 +209,31 @@ class ComProtocol(DatagramProtocol):
 		return msg
 
 	def datagramReceived(self, data, (host, port)):
-		#log.msg(data)
+		log.msg('%s from (%s, %d)' % (data, host, port))
 		try:
 			result = {}
 			message = json.loads(data)
 			
 			if RadioManagerProtocol.myPort == port:
 				if 'failure' not in message['result']:
-					self._service.setupRadios(message['result'])
+					for radio, props in message['result'].iteritems():
+						if not self._service.isRadio(props['port']) and not self.radioToVerify(props['port']):
+							log.msg('need to verify radio: ' + str(message['result']))
+							self.radiosToVerify[radio] = props
+							self._laterRads = task.LoopingCall (self.registerWithRadios)
+							self._laterRads.start(3.0)
+					#log.msg(message['result'])
+				else:
+					log.msg(message['result'])
+				return #nowhere to write!
+			elif self.radioToVerify(port):
+				if 'failure' not in message['result']:
+					radio, props = self.popRadio(port)
+					self._service.setupRadio(radio, props)
 					log.msg(message['result'])
 				else:
-					pass#log.msg(message['result'])
-				return #nowhere to write!
+					log.msg(message['result'])
+				return#nowhere to write!
 			elif 'cmd' == message['type']:
 				message['port'] = port
 				result = self._service.handleCmd(message)
