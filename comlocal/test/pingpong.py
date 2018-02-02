@@ -1,10 +1,11 @@
 #!/usr/bin/python
 
 from comlocal.interface import ComLocALIFace
-import sys
 import time
+import argparse
 
 #last = None
+readyToSend = True
 
 class myThing(object):
 	def __init__(self):
@@ -27,12 +28,19 @@ class myThing(object):
 			self.writeRes += 1
 
 def main():
+	parser = argparse.ArgumentParser()
+	parser.add_argument ("-c", "--count", required = True, help="set the number messages that sender should send")
+	parser.add_argument ("-f", "--first", action="store_true", default=False, help="set whether this device will send first")
+
+	args =  parser.parse_args()
+
 	thing = myThing()
 	myCom = ComLocALIFace.ComLocAL('TEST')
 	myCom.setReadCB (thing.reader)
 	myCom.setResultCB (thing.result)
 
-	count = 1000 if len(sys.argv) < 2 else int(sys.argv[1])
+	count = int(args.count)
+	readyToSend = args.first
 
 	msg = {'type':'msg','msg':'hello'}
 
