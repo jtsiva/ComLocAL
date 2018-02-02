@@ -4,6 +4,7 @@ from twisted.internet.protocol import ServerFactory, DatagramProtocol
 from twisted.python import log
 from comlocal.radio.RadioManager import RadioManagerProtocol
 from comlocal.util.NetworkLayer import NetworkLayer
+from comlocal.connection.ConnectionLayer import Radio
 import socket
 import fcntl
 import struct
@@ -56,6 +57,10 @@ class WiFiManagerProtocol(DatagramProtocol):
 		self._service = service
 		self._props = {}
 		self._setupProperties()
+
+		t = self._props['addr'].split('.')
+		t[-1] = '255'
+		self._broadcastAddr = '.'.join(t)
 
 	def sendRegistration (self):
 		regPacket = {}
@@ -120,7 +125,7 @@ class WiFiManagerProtocol(DatagramProtocol):
 				message = json.loads(data)
 				if '127.0.0.1' == host:
 					if 'msg' == message['type'] and self._service._registered:
-						addr = message['addr']
+						addr = message['addr'] if not message['addr'] == Radio.broadcastAddr else self._broadcastAddr
 						del message['addr']
 						data = json.dumps(message, separators=(',', ':'))
 						self.transport.write(data, (addr, self._service._port))
