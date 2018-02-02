@@ -113,6 +113,7 @@ class WiFiManagerProtocol(DatagramProtocol):
 
 	def datagramReceived(self, data, (host, port)):
 		log.msg(data + " from %s %d" % (host, port))
+		log.msg('I am: %s' % self._props['addr'])
 		if not host == self._props['addr']:
 			
 			try:

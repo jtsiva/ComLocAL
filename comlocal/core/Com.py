@@ -244,7 +244,8 @@ class ComProtocol(DatagramProtocol):
 			elif self._service.isApplication(port):
 				result = self._service.directCommToStack(message)
 			elif self._service.isRadio(port):
-				self._service.directCommToRadio(message, port)	
+				self._service.directCommToRadio(message, port)
+				return #nothing to send back to radio
 			else:
 				result = message
 				result['result'] = self._service.failure('unknown sender. register app with service')
