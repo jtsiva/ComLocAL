@@ -65,7 +65,7 @@ class ComLocAL(object):
 
 	# 	return writeDeferred, stopDeferred
 
-	@wait_for(timeout=1)
+	@wait_for(timeout=3)
 	def start(self):
 		self.comlocalProto = ComLocALProtocol(self, self.name)
 		reactor.listenUDP(10267, self.comlocalProto, interface='127.0.0.1')

@@ -4,7 +4,7 @@ from comlocal.interface import ComLocALIFace
 import time
 import argparse
 
-#last = None
+last = time.time()
 readyToSend = True
 
 class myThing(object):
@@ -24,7 +24,7 @@ class myThing(object):
 		if 'cmd' in msg:
 			self.cmdRes += 1
 		elif 'msg' in msg:
-			#last = time.time()
+			last = time.time()
 			self.writeRes += 1
 
 def main():
@@ -51,9 +51,10 @@ def main():
 		myCom.start()
 
 		while count > thing.writeRes:
-			if readyToSend:# or (time.time() - last) > 3:
+			if readyToSend or (time.time() - last) > 3:
 				myCom.comWrite(msg)
 				readyToSend = False
+				last = time.time()
 	except KeyboardInterrupt:
 		print ''
 	except Exception as e:
