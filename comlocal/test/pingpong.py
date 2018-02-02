@@ -1,57 +1,56 @@
 #!/usr/bin/python
 
-from comlocal.core import Com 
-import json
+from comlocal.interface import ComLocALIFace
 import sys
-import pdb
 import time
 
+#last = None
 
-def readHandler(msg):
-	readHandler.count += 1
-	readHandler.go = True
-	print json.dumps(msg, sort_keys=True, indent=4, separators=(',', ': '))
+class myThing(object):
+	def __init__(self):
+		self.read = 0
+		self.cmdRes = 0
+		self.writeRes = 0
+		self.readyToSend = False
+
+	def reader(self, msg):
+		#print msg
+		self.read += 1
+		readyToSend = True
+
+	def result(self, msg):
+		#print msg
+		if 'cmd' in msg:
+			self.cmdRes += 1
+		elif 'msg' in msg:
+			#last = time.time()
+			self.writeRes += 1
 
 def main():
-	com = Com.Com()
-	readHandler.count = 0
-	readHandler.go = False
-	com.setReadHandler(readHandler)
-	com.start()
+	thing = myThing()
+	myCom = ComLocALIFace.ComLocAL('TEST')
+	myCom.setReadCB (thing.reader)
+	myCom.setResultCB (thing.result)
+
+	count = 1000 if len(sys.argv) < 2 else int(sys.argv[1])
+
+	msg = {'type':'msg','msg':'hello'}
 
 	try:
+		myCom.start()
 
-		#set up read callback
-
-		pings = int(sys.argv[1]) if len(sys.argv) > 1 else 1000
-
-		msg = json.loads('{"type":"msg"}')
-		starttime = time.time()
-		while pings > 0:
-			if readHandler.go: #don't send unless we've received
-				msg['payload'] =  pings
-				com.write(msg)
-				pings -= 1
-				starttime = time.time()
-				readHandler.go = False
-			elif time.time() - starttime > 1.0:
-				readHandler.go = True
-			else:
-				time.sleep(0)
-		#
-
-		while True:
-			pass
+		while count > thing.writeRes:
+			if thing.readyToSend:# or (time.time() - last) > 3:
+				myCom.comWrite(msg)
 	except KeyboardInterrupt:
-		pass
-	finally:
-		com.stop()
+		print ''
+	except Exception as e:
+		print e
 
-	print readHandler.count
+	print 'reads: %i, writes: %i, cmd: %i' % (thing.read, thing.writeRes, thing.cmdRes)
 
 
 #
 
 if __name__ == "__main__":
-	#pdb.set_trace()
 	main()

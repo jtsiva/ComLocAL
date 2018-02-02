@@ -1,7 +1,5 @@
 from comlocal.interface import ComLocALIFace
 
-from threading import Thread
-import pdb
 
 class myThing(object):
 	def __init__(self):
