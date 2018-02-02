@@ -48,6 +48,7 @@ def main():
 	msg = {'type':'msg','msg':'hello','dest':dest}
 
 	try:
+		last = time.time()
 		myCom.start()
 
 		while count > thing.writeRes:
@@ -66,4 +67,5 @@ def main():
 #
 
 if __name__ == "__main__":
+
 	main()
