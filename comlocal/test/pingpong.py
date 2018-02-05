@@ -52,8 +52,8 @@ def main():
 		last = time.time()
 		myCom.start()
 
-		while count > thing.writeRes:
-			if readyToSend or (time.time() - last) > 3:
+		while count > thing.read:
+			if True:#readyToSend or (time.time() - last) > 3:
 				myCom.comWrite(msg)
 				readyToSend = False
 				last = time.time()
