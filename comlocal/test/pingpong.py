@@ -55,8 +55,8 @@ def main():
 		myCom.start()
 		writes = 0
 
-		while count > writes:
-			if readyToSend or (time.time() - last) > .5:
+		while count > thing.read:
+			if True:#readyToSend or (time.time() - last) > .5:
 				myCom.comWrite(msg)
 				writes += 1
 				readyToSend = False
