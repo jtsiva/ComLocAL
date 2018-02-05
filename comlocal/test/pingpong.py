@@ -65,7 +65,7 @@ def main():
 	except Exception as e:
 		print e
 
-	print 'reads: %i, writes: %i, cmd: %i' % (thing.read, thing.writeRes, thing.cmdRes)
+	print 'reads: %i, writes: %i, cmd: %i' % (thing.read, writes, thing.cmdRes)
 
 
 #
