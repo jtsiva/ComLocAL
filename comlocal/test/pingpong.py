@@ -15,6 +15,7 @@ class myThing(object):
 		self.readyToSend = False
 
 	def reader(self, msg):
+		readyToSend = True
 		self.read += 1
 		if self.read % 100 == 0:
 			print msg
@@ -24,7 +25,6 @@ class myThing(object):
 		#print msg
 		if 'cmd' in msg:
 			self.cmdRes += 1
-			readyToSend = True
 		elif 'msg' in msg:
 			last = time.time()
 			self.writeRes += 1
@@ -52,10 +52,12 @@ def main():
 	try:
 		last = time.time()
 		myCom.start()
+		writes = 0
 
-		while count > thing.writeRes:
+		while count > writes:
 			if readyToSend or (time.time() - last) > .5:
 				myCom.comWrite(msg)
+				writes += 1
 				readyToSend = False
 				last = time.time()
 	except KeyboardInterrupt:
