@@ -47,6 +47,7 @@ def main():
 
 	count = int(args.count)
 	sender = args.first
+	txAck = True
 	dest = int(args.dest)
 
 	msg = {'type':'msg','msg':'hello','dest':dest}
