@@ -18,12 +18,13 @@ class myThing(object):
 		self.read += 1
 		if self.read % 100 == 0:
 			print msg
-		readyToSend = True
+		
 
 	def result(self, msg):
 		#print msg
 		if 'cmd' in msg:
 			self.cmdRes += 1
+			readyToSend = True
 		elif 'msg' in msg:
 			last = time.time()
 			self.writeRes += 1
@@ -52,8 +53,8 @@ def main():
 		last = time.time()
 		myCom.start()
 
-		while count > thing.read:
-			if True:#readyToSend or (time.time() - last) > 3:
+		while count > thing.writeRes:
+			if readyToSend or (time.time() - last) > .5:
 				myCom.comWrite(msg)
 				readyToSend = False
 				last = time.time()
