@@ -154,9 +154,9 @@ class ComLocALProtocol(DatagramProtocol):
 		if self._registered:
 			if 'result' in message:
 				if self._obj.resultCB is not None:
-					reactor.callInThread(self._obj.resultCB, message)
-				#self._obj.resultCB(message)
+					#eactor.callInThread(self._obj.resultCB, message)
+					self._obj.resultCB(message)
 			else:
 				if self._obj.readCB is not None:
-					reactor.callInThread(self._obj.readCB, message)
-				#self._obj.readCB(message)
+					#reactor.callInThread(self._obj.readCB, message)
+					self._obj.readCB(message)
