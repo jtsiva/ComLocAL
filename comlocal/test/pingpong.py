@@ -15,10 +15,11 @@ class myThing(object):
 		self.readyToSend = False
 
 	def reader(self, msg):
-		readyToSend = True
+		
 		self.read += 1
 		if self.read % 100 == 0:
 			print msg
+		readyToSend = True
 		
 
 	def result(self, msg):
