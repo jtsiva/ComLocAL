@@ -8,11 +8,13 @@ class myThing(object):
 		self.writeRes = 0
 
 	def reader(self, msg):
-		print msg
+		#print msg
 		self.read += 1
+		if self.read % 1000 == 0:
+			print self.read
 
 	def result(self, msg):
-		print msg
+		#print msg
 		if 'cmd' in msg:
 			self.cmdRes += 1
 		elif 'msg' in msg:
