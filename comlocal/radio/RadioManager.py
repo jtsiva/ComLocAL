@@ -1,50 +1,20 @@
 from twisted.application import internet, service
-from twisted.internet.protocol import ServerFactory, DatagramProtocol
+from twisted.spread import pb
 from twisted.python import log
-import json
 
-class RadioManagerProtocol (DatagramProtocol):
+from comlocal.util.NetworkLayer import NetworkLayer
+
+class RadioManager (pb.Root, NetworkLayer):
 	myPort = 10247
 
-	def __init__(self, service):
-		self._service = service
-
-	def datagramReceived(self, data, (host, port)):
-		message = json.loads(data)
-		if 'msg' == message['type']:
-			response = data
-			
-		elif 'cmd' == message['type']:
-			response = self._service.handleCmd(message)
-
-		self.transport.write(response, (host,port))
-
-
-class RadioManagerService(service.Service):
-	def __init__ (self, authFile=None):
+	def __init__ (self):
 		self._radioReg = {}
-		self.authFile = authFile
+		NetworkLayer.__init__(self, 'RadMgr')
 
-	def startService (self):
-		service.Service.startService(self)
-		if self.authFile is not None:
-			self.authKey = open(self.authFile).read()
-			log.msg('loaded auth key from: %s' % (self.authFile,))
-		else:
-			log.msg ('no file from which to load auth key')
+	def remote_cmd(self, cmd):
+		log.msg (cmd)
 
-	def isAuthorized (self, toCheck):
-		return True
-
-	def handleCmd (self, cmd):
-		try:
-			key = cmd['auth']
-		except:
-			key = ''
-
-		log.msg (json.dumps(cmd))
-
-		if self.isAuthorized(key):
+		if 'cmd' in cmd:
 			if 'get_radios' == cmd['cmd']:
 				cmd['result'] = self._radioReg
 			elif 'reg_radio' == cmd['cmd']:
@@ -52,32 +22,29 @@ class RadioManagerService(service.Service):
 					name = cmd['name']
 					props = cmd['props'] #minimally should contain port
 					self._radioReg[name] = props
-					cmd['result'] = 'success'
+					cmd['result'] = self.success('')
 				except KeyError:
-					cmd['result'] = 'failed'
+					cmd['result'] = self.failure("missing attributes in props")
 			elif 'unreg_radio' == cmd['cmd']:
 				try:
-					del self._radioReg[cmd['name']]
-					cmd['result'] = 'success'
+					self._radioReg.pop(cmd['name'])
+					cmd['result'] = self.success('')
 				except KeyError:
-					cmd['result'] = 'failed'
+					cmd['result'] = self.failure('no radio to remove')
 			else:
-				cmd['result'] = "failed: no command %s" % (cmd['cmd'])
+				cmd['result'] = self.failure("no command %s" % (cmd['cmd']))
 		else:
-			cmd['result'] = "failed: not authorized"
+			cmd['result'] = self.failure ("no command given")
 
-		return json.dumps(cmd)
+		return cmd
 
-port = RadioManagerProtocol.myPort
+	def remote_write(self, data):
+		return data
+
+
+port = RadioManager.myPort
 iface = '127.0.0.1'
-authFile = ''
 
-topService = service.MultiService()
-radioManagerService = RadioManagerService()
-radioManagerService.setServiceParent(topService)
-
-udpService = internet.UDPServer(port, RadioManagerProtocol(radioManagerService), interface=iface)
-udpService.setServiceParent(topService)
-
-application = service.Application('radiomanager')
-topService.setServiceParent(application)
+application = service.Application("RadioManager")
+myService = internet.TCPServer(port, pb.PBServerFactory(RadioManager()), interface=iface)
+myService.setServiceParent(application)

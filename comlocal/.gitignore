@@ -1,3 +1,4 @@
 *.pyc
 *.egg-info
 *.log
+*_trial_marker
