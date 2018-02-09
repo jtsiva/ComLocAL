@@ -204,6 +204,27 @@ class WiFiManagerTestCase(TestCase):
 
 		return  self.client.d
 
+	def test_regLocalAndSendNotJSON(self):
+
+		def send(result):
+			self.wifiTransport.datagramReceived("Hello", ('127.0.0.1', 10666))
+			self.d = deferLater( reactor, 1.0, res, None)
+			return self.d
+
+		def res(result):
+			self.assertTrue(not self.local.received)
+
+		def connected(obj):
+			d = obj.callRemote('cmd', {'cmd': 'reg_local','port':6666})
+			obj.callRemote('cmd', {'cmd': 'allow_from_self'})
+			
+			d.addCallback(send)
+			return d
+
+		self.client.d.addCallback(connected)
+
+		return  self.client.d
+
 
 	def test_notACommand(self):
 		def res(result):

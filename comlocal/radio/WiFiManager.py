@@ -193,7 +193,7 @@ class WiFiTransport (DatagramProtocol):
 				try:
 					message = json.loads(data)
 					self.manager.sendToLocalReceivers(message)
-				except KeyError:
+				except ValueError:
 					pass #drop poorly formed packets
 
 iface = "0.0.0.0"
