@@ -79,8 +79,8 @@ class WiFiManager (pb.Root, NetworkLayer):
 		return message
 
 	def sendToLocalReceivers(self, message):
-		log.msg('HIT!!!!!!!!!!!!!')
-		log.msg(self._localReceivers)
+
+		message['radio'] = self.name
 
 		def readAck(result):
 			return result #hooray?
@@ -108,7 +108,6 @@ class WiFiManager (pb.Root, NetworkLayer):
 		def regAck(result):
 			self._registered = True
 			self.tryToRegister.stop()
-			self.radMgrConnect.disconnect()
 
 		def regNack(reason):
 			log.msg(reason)
@@ -117,6 +116,7 @@ class WiFiManager (pb.Root, NetworkLayer):
 			regPacket = {'cmd':'reg_radio','name':self.name,'props':self.props}
 			d = obj.callRemote('cmd', regPacket)
 			d.addCallbacks(regAck,regNack)
+			d.addCallback(lambda result: obj.broker.transport.loseConnection())
 			return d
 
 		def failed(reason):

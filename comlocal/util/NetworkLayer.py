@@ -6,10 +6,10 @@ class NetworkLayer (object):
 		self.writeCB = None
 
 	def failure(self, msg):
-		return "(" + self.name + ") failure: " + msg
+		return self.name + "failure: " + msg
 
 	def success(self, msg):
-		return "(" + self.name + ") success: " + msg
+		return self.name + "success: " + msg
 	
 	def	setReadCB (self, cb):
 		"""

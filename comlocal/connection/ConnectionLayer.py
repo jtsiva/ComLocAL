@@ -71,7 +71,6 @@ class Radio(object):
 		#LOCK
 		self._connections[data['sentby']] = time.time()
 		#UNLOCK
-		data['radio'] = self._name
 		self._readCB(data)
 
 	def _cleanOutoing (self, msg):
@@ -184,10 +183,8 @@ class ConnectionLayer(NetworkLayer):
 
 		return False
 
-	def directCommTo(self, message, port):
-		for radio in self.radios:
-			if radio._port == port:
-				radio.read(message)
+	def directCommTo(self, message, name):
+		self.getRadio(name).read(message)
 
 	def ping(self, extra = None):
 		if self._commonData['logging']['inUse']:
