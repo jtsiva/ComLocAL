@@ -1,8 +1,11 @@
 from twisted.application import internet, service
-from twisted.internet import task
+from twisted.internet import task, reactor
 from twisted.internet.protocol import ServerFactory, DatagramProtocol
+
+
+from twisted.spread import pb
 from twisted.python import log
-from comlocal.radio.RadioManager import RadioManagerProtocol
+from comlocal.radio.RadioManager import RadioManager
 from comlocal.util.NetworkLayer import NetworkLayer
 from comlocal.connection.ConnectionLayer import Radio
 import socket
@@ -10,75 +13,123 @@ import fcntl
 import struct
 import json
 
-class WiFiManagerService (service.Service, NetworkLayer):
-	def __init__ (self, port, authFile = None):
+class WiFiManager (pb.Root, NetworkLayer):
+	myPort = 10249
+	def __init__ (self):
 		NetworkLayer.__init__(self, 'WiFi')
-		self._port = port
-		self._localReceivers = []
-		self._authFile = authFile
+		self._localReceivers = set()
 		self._registered = False
 
+		self.props = {}
+		self._setupProperties()
 
-	def startService (self):
-		service.Service.startService(self)
-		if self._authFile is not None:
-			self._authKey = open(self._authFile).read()
-			log.msg('loaded auth key from: %s' % (self._authFile,))
-		else:
-			self._authKey = ''
-			log.msg ('no file from which to load auth key')
+		t = self.props['addr'].split('.')
+		t[-1] = '255'
 
-	def handleCmd(self, cmd):
+		self.broadcastAddr = '.'.join(t)
+
+		self.transport = None
+		self.tryToRegister = task.LoopingCall (self.sendRegistration)
+		self.tryToRegister.start(5.0)
+
+	#def startProtocol(self):
+		
+
+	def setTransport(self, transport):
+		self.transport = transport
+
+	def remote_cmd(self, cmd):
+		#log.msg('received command: %s' % cmd)
 		try:
 			if 'reg_local' == cmd['cmd']:
 				port = cmd['port']
-				self.addLocalReceiver(('127.0.0.1', port))
+				self._localReceivers.add(port)
 				cmd['result'] = self.success('')
-			elif 'reg_radio' == cmd['cmd'] and 'success' == cmd['result']:
-				self._registered = True
-				log.msg("Registered!")
-				return None
+			elif 'unreg_local' == cmd['cmd']:
+				port = cmd['port']
+				self._localReceivers.remove(port) #can't pop--it's a list
+				cmd['result'] = self.success('')
+			elif 'get_local' == cmd['cmd']:
+				cmd['result'] = self._localReceivers
+			elif 'check_radio_reg' == cmd['cmd']:
+				cmd['result'] = str(self._registered)
+			elif 'get_props' == cmd['cmd']:
+				cmd['result'] = self.props
+			elif 'allow_from_self' == cmd['cmd']:
+				self.transport.allowMsgFromSelf(True)
 			else:
 				cmd['result'] = self.failure("no command %s" % (cmd['cmd']))
 
 		except KeyError:
 			cmd['result'] = self.failure('poorly formatted command (missing a field?)')
+		except Exception as e:
+			raise pb.Error (e) 
 
-		return json.dumps(cmd)
+		return cmd
 
-	def getLocalReceivers(self):
+	def remote_write(self, message):
+		try:
+			addr = message.pop('addr')
+			self.transport.write(message, addr)
+			message['result'] = self.success('')
+		except KeyError:
+			message['result'] = self.failure('missing "addr" field')
+		except Exception as e:
+			raise pb.Error(e)
+		return message
+
+	def sendToLocalReceivers(self, message):
+		log.msg('HIT!!!!!!!!!!!!!')
+		log.msg(self._localReceivers)
+
+		def readAck(result):
+			return result #hooray?
+
+		def readNack(reason):
+			log.msg(reason) #not hooray
+
+		def connected(obj):
+			d = obj.callRemote('read', message)
+			d.addCallbacks(readAck,readNack)
+			d.addCallback(lambda result: obj.broker.transport.loseConnection())
+			return d
+
+		for port in self._localReceivers:
+			factory = pb.PBClientFactory()
+			connect = reactor.connectTCP("127.0.0.1", port, factory)
+			d = factory.getRootObject()
+			d.addCallback(connected)
+
+	def _getLocalReceivers(self):
 		return self._localReceivers
 
-	def addLocalReceiver (self, entry):
-		self._localReceivers.append(entry)
-
-class WiFiManagerProtocol(DatagramProtocol):
-	def __init__(self, service):
-		self._service = service
-		self._props = {}
-		self._setupProperties()
-
-		t = self._props['addr'].split('.')
-		t[-1] = '255'
-		self._broadcastAddr = '.'.join(t)
-
 	def sendRegistration (self):
-		regPacket = {}
-		regPacket['type'] = 'cmd'
-		regPacket['auth'] = self._service._authKey
-		regPacket['cmd'] = 'reg_radio'
-		regPacket['name'] = 'WiFi'
-		regPacket['props'] = self._props
-		self.transport.write(json.dumps(regPacket), ('127.0.0.1', radioMgrPort))
+
+		def regAck(result):
+			self._registered = True
+			self.tryToRegister.stop()
+			self.radMgrConnect.disconnect()
+
+		def regNack(reason):
+			log.msg(reason)
+
+		def connected(obj):
+			regPacket = {'cmd':'reg_radio','name':self.name,'props':self.props}
+			d = obj.callRemote('cmd', regPacket)
+			d.addCallbacks(regAck,regNack)
+			return d
+
+		def failed(reason):
+			log.msg(reason)
+
+		factory = pb.PBClientFactory()
+		self.radMgrConnect = reactor.connectTCP("127.0.0.1", RadioManager.myPort, factory)
+		d = factory.getRootObject()
+		d.addCallbacks(connected, failed)
+
 		log.msg('registering with RadioManager')
 
-	def checkRegistration (self):
-		#if the RadioManager responded then we don't need to keep
-		#checking
-		if self._service._registered:
-			self._later.stop()
-		else:
-			self.sendRegistration()
+		return d
 
 	def _get_ip_address(self, ifname):
 		"""
@@ -97,62 +148,67 @@ class WiFiManagerProtocol(DatagramProtocol):
 		Set up the radio properties we might need
 		"""
 		try:
-			self._props['addr'] = self._get_ip_address('wlan0')
+			self.props['addr'] = self._get_ip_address('wlan0')
 		except IOError:
 			#my laptop has a different form
-			self._props['addr'] = self._get_ip_address('wlp1s0')
+			self.props['addr'] = self._get_ip_address('wlp1s0')
 
-		self._props['maxPacketLength'] = 4096
-		self._props['costPerByte'] = 1
-		self._props['port'] = self._service._port
+		self.props['maxPacketLength'] = 4096
+		self.props['costPerByte'] = 1
+		self.props['port'] = WiFiManager.myPort
 
+
+
+class WiFiTransport (DatagramProtocol):
+	myPort = 10248
+
+	def __init__(self):
+		self.manager = None
 
 	def startProtocol (self):
 		self.transport.setBroadcastAllowed(True)
+		self.allowFromSelf = False
+		
 
-		#give the other service three seconds to start up
-		from twisted.internet import reactor
-		self._later = task.LoopingCall (self.checkRegistration)
-		task.deferLater(reactor, 3.0, self.sendRegistration)
-		task.deferLater(reactor, 5.0, self._later.start, 5.0)
+	def allowMsgFromSelf(self, b):
+		self.allowFromSelf = b
+
+	def setManager (self, manager):
+		self.manager = manager
+
+	def write (self, message, addr):
+		data = json.dumps(message, separators=(',', ':'))
+		self.transport.write(data, (addr, WiFiTransport.myPort))
+
 
 	def datagramReceived(self, data, (host, port)):
 		log.msg(data + " from %s %d" % (host, port))
-		log.msg('I am: %s' % self._props['addr'])
-		if not host == self._props['addr']:
-			
-			try:
-				message = json.loads(data)
-				if '127.0.0.1' == host:
-					if 'msg' == message['type'] and self._service._registered:
-						addr = message['addr'] if not message['addr'] == Radio.broadcastAddr else self._broadcastAddr
-						del message['addr']
-						data = json.dumps(message, separators=(',', ':'))
-						self.transport.write(data, (addr, self._service._port))
-					elif 'cmd' == message['type']:
-						message['port'] = port
-						response = self._service.handleCmd(message)
-						if response is not None:
-							self.transport.write(response, (host, port))
-				elif not '127.0.0.1' == host and self._service._registered:
-					message['sentby'] = host
-					data = json.dumps(message)
-					for addr in self._service.getLocalReceivers():
-						log.msg('sending to %s,%d' % addr)
-						self.transport.write(data, addr)
-			except KeyError:
-				pass #drop poorly formed packets
+		
+		#don't do anything if not set up or if manager has already
+		#been gc'd
+		if self.manager is not None: 
+			log.msg('I am: %s' % self.manager.props['addr'])
 
-radioMgrPort = RadioManagerProtocol.myPort
-port = 10248
+			if (not host == self.manager.props['addr']) or self.allowFromSelf:
+				try:
+					message = json.loads(data)
+					self.manager.sendToLocalReceivers(message)
+				except KeyError:
+					pass #drop poorly formed packets
+
 iface = "0.0.0.0"
 
 topService = service.MultiService()
 
-wifiManagerService = WiFiManagerService(port)
-wifiManagerService.setServiceParent(topService)
+wifiManager = WiFiManager()
+wifiTransport = WiFiTransport()
+wifiManager.setTransport(wifiTransport)
+wifiTransport.setManager(wifiManager)
 
-udpService = internet.UDPServer(port, WiFiManagerProtocol(wifiManagerService))
+pbService = internet.TCPServer(WiFiManager.myPort, pb.PBServerFactory(wifiManager))
+pbService.setServiceParent(topService)
+
+udpService = internet.UDPServer(WiFiTransport.myPort, wifiTransport)
 udpService.setServiceParent(topService)
 
 application = service.Application('wifimanager')
