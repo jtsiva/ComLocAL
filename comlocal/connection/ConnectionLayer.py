@@ -36,8 +36,7 @@ class Radio(object):
 		self._writeCB = cb
 
 	def ping(self, connection = broadcastAddr, extra = None):
-		data = {'type':'ping'}
-
+		data = {'ping':''}
 		data['addr'] = connection
 
 		if extra is not None:
@@ -224,7 +223,7 @@ class ConnectionLayer(NetworkLayer):
 			if 'cmd' in msg:
 				msg['result'] = self.failure("unrecognized command %s" % msg['cmd'])
 				return msg
-
+			ret = []
 			for radio, addr in msg['radios']:
 				if radio in self.getRadioNames():
 					rad = self.getRadio(radio)
@@ -233,18 +232,19 @@ class ConnectionLayer(NetworkLayer):
 					if self._commonData['logging']['inUse']:
 						self._commonData['logging']['connection']['sent'] += 1
 					
-					ret = rad.write(msg)
-					if 'failure' in ret['result']:
-						everythingOkay = False
-						# if 'result' not in msg:
-						# 	msg['result'] = self.failure('')
+					ret.append(rad.write(msg))
+			# 		if 'failure' in ret['result']:
+			# 			everythingOkay = False
+			# 			# if 'result' not in msg:
+			# 			# 	msg['result'] = self.failure('')
 
-						msg['result'] += self.failure(rad.getName() + ' ')
-					else:
-						everythingOkay = True
+			# 			msg['result'] += self.failure(rad.getName() + ' ')
+			# 		else:
+			# 			everythingOkay = True
 
-			if everythingOkay is None:
-				msg['result'] = self.failure("no radios registered")
+			# if everythingOkay is None:
+			# 	msg['result'] = self.failure("no radios registered")
+			return ret
 		except Exception as e:
 			msg['result'] = self.failure(str(e))
 

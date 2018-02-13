@@ -76,7 +76,7 @@ class RoutingLayer(NetworkLayer):
 
 	def _isPing(self, msg):
 		try:
-			return msg["type"] == "ping"
+			return 'ping' in msg
 		except KeyError:
 			return False
 	#
@@ -146,7 +146,7 @@ class RoutingLayer(NetworkLayer):
 
 	def write(self, msg):
 		try:
-			if  msg['type'] == "cmd":
+			if "cmd" in msg:
 				if msg['cmd'] == 'get_neighbors':
 					#LOCK
 					msg['result'] = self._networkGraph.neighbors(self._commonData['id'])

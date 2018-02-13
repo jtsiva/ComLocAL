@@ -21,9 +21,9 @@ class MessageLayer(NetworkLayer):
 
 	def write(self, msg):
 		try:
-			if 'msg' == msg['type'] and 'msg' in msg and 'dest' in msg:
+			if 'msg' in msg and 'dest' in msg:
 				return self.writeCB(self._addMsgId(msg))
-			elif 'cmd' == msg['type'] and 'cmd' in msg:
+			elif 'cmd' in msg:
 				return self.writeCB(msg)
 			else:
 				raise KeyError

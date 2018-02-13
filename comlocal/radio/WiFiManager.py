@@ -69,6 +69,7 @@ class WiFiManager (pb.Root, NetworkLayer):
 
 	def remote_write(self, message):
 		try:
+			message['sentby'] = self.props['addr']
 			addr = message.pop('addr')
 			self.transport.write(message, addr)
 			message['result'] = self.success('')
@@ -79,26 +80,29 @@ class WiFiManager (pb.Root, NetworkLayer):
 		return message
 
 	def sendToLocalReceivers(self, message):
+		if 'sentby' in message and 'msg' in message and 'dest' in message:
+			message['radio'] = self.name
 
-		message['radio'] = self.name
+			def readAck(result):
+				return result #hooray?
 
-		def readAck(result):
-			return result #hooray?
+			def readNack(reason):
+				log.msg(reason) #not hooray
 
-		def readNack(reason):
-			log.msg(reason) #not hooray
+			def connected(obj):
+				d = obj.callRemote('read', message)
+				d.addCallbacks(readAck,readNack)
+				d.addCallback(lambda result: obj.broker.transport.loseConnection())
+				return d
 
-		def connected(obj):
-			d = obj.callRemote('read', message)
-			d.addCallbacks(readAck,readNack)
-			d.addCallback(lambda result: obj.broker.transport.loseConnection())
-			return d
-
-		for port in self._localReceivers:
-			factory = pb.PBClientFactory()
-			connect = reactor.connectTCP("127.0.0.1", port, factory)
-			d = factory.getRootObject()
-			d.addCallback(connected)
+			for port in self._localReceivers:
+				factory = pb.PBClientFactory()
+				connect = reactor.connectTCP("127.0.0.1", port, factory)
+				d = factory.getRootObject()
+				d.addCallback(connected)
+		else:
+			pass
+			#drop poorly formed packets
 
 	def _getLocalReceivers(self):
 		return self._localReceivers

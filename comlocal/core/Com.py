@@ -1,18 +1,15 @@
-from twisted.application import internet, service
-from twisted.internet import task
-from twisted.internet.protocol import ServerFactory
+from twisted.internet import reactor, defer
 from twisted.spread import pb
+from twisted.internet.defer import maybeDeferred
 
 from twisted.python import log
 
-from comlocal.radio.RadioManager import RadioManagerProtocol
+from comlocal.radio.RadioManager import RadioManager
 from comlocal.util.NetworkLayer import NetworkLayer
 from comlocal.connection import ConnectionLayer
 from comlocal.routing import RoutingLayer
 from comlocal.message import MessageLayer
 import random
-import json
-
 
 class Com(pb.Root, NetworkLayer):
 	broadcastSinkID = -1
@@ -28,7 +25,7 @@ class Com(pb.Root, NetworkLayer):
 
 		self._CL = ConnectionLayer.ConnectionLayer(self._commonData)
 		self._RL = RoutingLayer.RoutingLayer(self._commonData)
-		self._RL.addNode(ComService.broadcastSinkID)
+		self._RL.addNode(Com.broadcastSinkID)
 
 		self._ML = MessageLayer.MessageLayer(self._commonData)
 
@@ -45,32 +42,65 @@ class Com(pb.Root, NetworkLayer):
 		self._ML.setWriteCB(self._RL.write)
 
 
-		checkForRadios.pending = {}
+		self._radiosPending = {}
+		self._checkForRadios()
 	
 	#
 
-	def isApplication(self, port):
-		for key in self._registeredApplications:
-			if self._registeredApplications[key] == port:
-				return True
+	def remote_cmd(self, cmd):
+		try:
+			if 'reg_app' == cmd['cmd']:
+				#only use 4 char for name (just in case they sent more)
+				self._registeredApplications[cmd['name'][:4]] = cmd['port']
+				cmd['result'] = self.success('')
+			elif 'check_for_radios' == cmd['cmd']:
+				d = self._checkForRadios()
+				return d
+			else:
+				cmd = self._directCommToStack(cmd)
 
-		return False
+		except KeyError:
+			cmd['result'] = self.failure("poorly formed message")
+		except Exception as e:
+			raise pb.Error(e)
 
+		log.msg(cmd)
 
-	def isRadio(self, port):
+		return cmd
+
+	def remote_read(self, msg):
+		return self._directCommToRadio(msg, msg['radio'])
+
+	def remote_write(self, msg):
+		ret = self._directCommToStack(msg)
+	
+		def printIt(res):
+			print res
+			return res
+
+		if isinstance(ret, list):
+			for thing in ret:
+				thing.addCallback(printIt)
+				
+			d = defer.DeferredList(ret)
+			return d
+		else:
+			return ret
+
+	def _isRadio(self, port):
 		return self._CL.isRadio(port)
 
-	def directCommToRadio(self, message, name):
+	def _directCommToRadio(self, message, name):
 		#log.msg('from radio ')
 		self._CL.directCommTo(message, name)
 
-	def directCommToStack (self, message):
+	def _directCommToStack (self, message):
 		if 'msg' in message:
-			message['radios'] = self.chooseRadios()
+			message['radios'] = self._chooseRadios()
 			#log.msg(message['radios'])
 		return self._ML.write(message)
 
-	def chooseRadios(self):
+	def _chooseRadios(self):
 		"""
 		TODO: radio selection scheme. Make more intelligent
 
@@ -95,23 +125,6 @@ class Com(pb.Root, NetworkLayer):
 		self._commonData['logging'] = {'inUse': False} if not log else {'inUse': True}
 	#
 
-	def remote_cmd(self, cmd):
-		try:
-			if 'reg_app' == cmd['cmd']:
-				#only use 4 char for name (just in case they sent more)
-				self._registeredApplications[cmd['name'][:4]] = cmd['port']
-				cmd['result'] = self.success('')
-			elif 'check_for_radios' == cmd['cmd']:
-				d = self.checkForRadios()
-				return d
-			else:
-				cmd = self.directCommToStack(cmd)
-
-		except KeyError:
-			cmd['result'] = self.failure("poorly formed message")
-
-		return cmd
-
 	def _read(self, msg):
 		def readAck(result):
 			return result
@@ -128,59 +141,57 @@ class Com(pb.Root, NetworkLayer):
 
 
 		if 'app' in msg:
-			reactor.connectTCP("127.0.0.1", self._registeredApplications[msg['app']], pb.PBClientFactory())
+			factory = pb.PBClientFactory()
+			reactor.connectTCP("127.0.0.1", self._registeredApplications[msg['app']], factory)
 			d = factory.getRootObject()
 			d.addCallback(connected)
 		else:
 			for key, val in self._registeredApplications.iteritems():
-				reactor.connectTCP("127.0.0.1", val, pb.PBClientFactory())
+				factory = pb.PBClientFactory()
+				reactor.connectTCP("127.0.0.1", val, factory)
 				d = factory.getRootObject()
 				d.addCallback(connected)
 
 		#return d
 
 	def _write(self, msg):
+		#print msg
 		port = msg.pop('radio')
 
 		def writeAck(result):
+			print self.success(str(result))
 			return result
 
-		def writeNack(reason):
-			log.msg(reason)
+		def failed(reason):
+			log.msg(self.failure (str(reason)))
 
 		def connected(obj):
 			d = obj.callRemote('write', msg)
-			d.addCallbacks(writeAck, writeNack)
-			d.addCallbacks(lambda result: obj.broker.transport.loseConnection(), writeNack)
+			d.addCallbacks(writeAck, failed)
+			d.addCallbacks(lambda result: obj.broker.transport.loseConnection(), failed)
 
 			return d
 
-		reactor.connectTCP("127.0.0.1", port, pb.PBClientFactory())
+		factory = pb.PBClientFactory()
+		reactor.connectTCP("127.0.0.1", port, factory)
 		d = factory.getRootObject()
-		d.addCallback(connected)
+		d.addCallbacks(connected, failed)
 
 		return d
 
-
-	def remote_read(self, msg):
-		return self.directCommToRadio(msg, msg['radio'])
-
-	def remote_write(self, msg):
-		return self.directCommToStack(msg)
-
-	def setupRadio (self, radio, props):
+	def _setupRadio (self, radio, props):
 		if not self._CL.isRadio(props['port']):
 			self._CL.addRadio(radio,props['port'])
-			self._RL.addNode(ComService.broadcastSinkID)
-			self._RL.addLink(self._commonData['id'], ComService.broadcastSinkID, 
+			self._RL.addNode(Com.broadcastSinkID)
+			self._RL.addLink(self._commonData['id'], Com.broadcastSinkID, 
 								radio, ConnectionLayer.Radio.broadcastAddr)
 
-	def checkForRadios (self):
+	def _checkForRadios (self):
 		def regAck(result):
 			if 'success' in result['result']:
 				name = result['result'].split()[0] #name is in first part
-				props = checkForRadios.pending.pop(name)
-				self.setupRadio(name, props)
+				props = self._radiosPending.pop(name)
+				self._setupRadio(name, props)
 
 		def regNack(reason):
 			log.msg(reason)
@@ -191,14 +202,19 @@ class Com(pb.Root, NetworkLayer):
 			d.addCallbacks(regAck, regNack)
 			d.addCallback(lambda result: obj.broker.transport.loseConnection())
 
+		def failedToConnectToRadio(reason):
+			log.msg(self.failure(str(reason)))
+
 		def checkAck(result):
 			try:
+				log.msg(result)
 				for radio, props in result['result'].iteritems():
 					if radio not in self._CL.getRadioNames():
-						checkForRadios.pending[radio] = props
-						reactor.connectTCP("127.0.0.1", props['port'], pb.PBClientFactory())
+						self._radiosPending[radio] = props
+						factory = pb.PBClientFactory()
+						reactor.connectTCP("127.0.0.1", props['port'], factory)
 						d = factory.getRootObject()
-						d.addCallback(connectedToRadio)
+						d.addCallbacks(connectedToRadio, failedToConnectToRadio)
 
 			except KeyError:
 				raise pb.Error
@@ -214,23 +230,13 @@ class Com(pb.Root, NetworkLayer):
 			return d
 
 		def failed(reason):
-			log.msg(reason)
+			print self.failure(str(reason))
 
-
-		reactor.connectTCP("127.0.0.1", RadioManager.myPort, pb.PBClientFactory())
+		factory = pb.PBClientFactory()
+		reactor.connectTCP("127.0.0.1", RadioManager.myPort, factory)
 		d = factory.getRootObject()
 		d.addCallbacks(connected, failed)
 
 		log.msg('checking radio manager for radios')
 
 		return d
-
-
-port = Com.myPort
-iface = "127.0.0.1"
-configFile = 'default.conf'
-
-
-application = service.Application("Com")
-myService = internet.TCPServer(port, pb.PBServerFactory(Com(configFile=configFile)), interface=iface)
-myService.setServiceParent(application)
