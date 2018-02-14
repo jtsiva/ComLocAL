@@ -1,6 +1,6 @@
 from twisted.internet import reactor, defer
 from twisted.spread import pb
-from twisted.internet.defer import maybeDeferred
+from twisted.internet.defer import maybeDeferred, gatherResults
 
 from twisted.python import log
 
@@ -73,16 +73,9 @@ class Com(pb.Root, NetworkLayer):
 
 	def remote_write(self, msg):
 		ret = self._directCommToStack(msg)
-	
-		def printIt(res):
-			print res
-			return res
 
 		if isinstance(ret, list):
-			for thing in ret:
-				thing.addCallback(printIt)
-				
-			d = defer.DeferredList(ret)
+			d = gatherResults(ret)
 			return d
 		else:
 			return ret
@@ -159,16 +152,20 @@ class Com(pb.Root, NetworkLayer):
 		port = msg.pop('radio')
 
 		def writeAck(result):
-			print self.success(str(result))
+			#print self.success(str(result))
 			return result
 
 		def failed(reason):
 			log.msg(self.failure (str(reason)))
+			reason.printTraceback()
 
 		def connected(obj):
+			def closeAndReturn (res):
+				obj.broker.transport.loseConnection()
+				return res
 			d = obj.callRemote('write', msg)
 			d.addCallbacks(writeAck, failed)
-			d.addCallbacks(lambda result: obj.broker.transport.loseConnection(), failed)
+			d.addCallbacks(closeAndReturn, failed)
 
 			return d
 

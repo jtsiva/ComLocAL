@@ -356,13 +356,13 @@ class ComTestCase(TestCase):
 		message = {'msg':'hello','dest':1}
 
 		def res(result):
-			print result #TODO: fix -- returns [(True, None)]???
-			self.assertTrue(message == result)
-			self.client.end()			
+			self.assertTrue(message['msg'] == result[0]['msg'] and 'success' in result[0]['result'])
+			self.client.end()		
 
 		def nack(reason):
-			print reason
+			reason.printTraceback()
 			self.client.end()
+			self.assertTrue(False)
 
 		def failed(reason):
 			print 'failed!'
