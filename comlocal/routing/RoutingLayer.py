@@ -98,7 +98,7 @@ class RoutingLayer(NetworkLayer):
 		if msg['src'] not in self._networkGraph:
 			self.addNode (msg['src'])
 
-		if msg['radio'] not in self._networkGraph.edges():
+		if msg['radio'] not in self._networkGraph.edges([self._commonData['id'], msg['src']]):
 			self.addLink(self._commonData['id'], msg['src'], msg['radio'],msg['sentby'])
 
 

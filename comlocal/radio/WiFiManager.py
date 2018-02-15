@@ -1,4 +1,3 @@
-from twisted.application import internet, service
 from twisted.internet import task, reactor
 from twisted.internet.protocol import ServerFactory, DatagramProtocol
 
@@ -7,7 +6,6 @@ from twisted.spread import pb
 from twisted.python import log
 from comlocal.radio.RadioManager import RadioManager
 from comlocal.util.NetworkLayer import NetworkLayer
-from comlocal.connection.ConnectionLayer import Radio
 import socket
 import fcntl
 import struct
@@ -69,7 +67,7 @@ class WiFiManager (pb.Root, NetworkLayer):
 
 	def remote_write(self, message):
 		try:
-			message['sentby'] = self.props['addr']
+			#message['sentby'] = self.props['addr']
 			addr = message.pop('addr')
 			self.transport.write(message, addr)
 			message['result'] = self.success('')
@@ -196,24 +194,8 @@ class WiFiTransport (DatagramProtocol):
 			if (not host == self.manager.props['addr']) or self.allowFromSelf:
 				try:
 					message = json.loads(data)
+					message['sentby'] = host
 					self.manager.sendToLocalReceivers(message)
 				except ValueError:
 					pass #drop poorly formed packets
 
-iface = "0.0.0.0"
-
-topService = service.MultiService()
-
-wifiManager = WiFiManager()
-wifiTransport = WiFiTransport()
-wifiManager.setTransport(wifiTransport)
-wifiTransport.setManager(wifiManager)
-
-pbService = internet.TCPServer(WiFiManager.myPort, pb.PBServerFactory(wifiManager))
-pbService.setServiceParent(topService)
-
-udpService = internet.UDPServer(WiFiTransport.myPort, wifiTransport)
-udpService.setServiceParent(topService)
-
-application = service.Application('wifimanager')
-topService.setServiceParent(application)

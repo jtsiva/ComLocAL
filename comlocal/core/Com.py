@@ -9,6 +9,7 @@ from comlocal.util.NetworkLayer import NetworkLayer
 from comlocal.connection import ConnectionLayer
 from comlocal.routing import RoutingLayer
 from comlocal.message import MessageLayer
+import json
 import random
 
 class Com(pb.Root, NetworkLayer):
@@ -51,8 +52,19 @@ class Com(pb.Root, NetworkLayer):
 		try:
 			if 'reg_app' == cmd['cmd']:
 				#only use 4 char for name (just in case they sent more)
-				self._registeredApplications[cmd['name'][:4]] = cmd['port']
-				cmd['result'] = self.success('')
+				if cmd['name'][:4] in self._registeredApplications:
+					cmd['result'] = self.failure('app already registered with that name')
+				elif not isinstance(cmd['port'], int):
+					cmd['result'] = self.failure('port needs to be a number')
+				else:
+					self._registeredApplications[cmd['name'][:4]] = cmd['port']
+					cmd['result'] = self.success('')
+			elif 'unreg_app' == cmd['cmd']:
+				if cmd['name'] not in self._registeredApplications:
+					cmd['result'] = self.failure('no app with that name registered')
+				else:
+					port = self._registeredApplications.pop(cmd['name'])
+					cmd['result'] = self.success ('unregistered %s at %d' % (cmd['name'], port))
 			elif 'check_for_radios' == cmd['cmd']:
 				d = self._checkForRadios()
 				return d
@@ -74,8 +86,26 @@ class Com(pb.Root, NetworkLayer):
 	def remote_write(self, msg):
 		ret = self._directCommToStack(msg)
 
+		def checkResults(results):
+			temp = results[0]
+			success = True
+			for res in results:
+				if 'failure' in res['result']:
+					log.msg(res['result'].split()[0] + ' failed')
+					success = False
+					
+
+			if not success:
+				temp['result'] = self.failure('not all radios successful')
+			else:
+				temp['result'] = self.success('')
+
+			return temp
+
+
 		if isinstance(ret, list):
 			d = gatherResults(ret)
+			d.addCallback(checkResults)
 			return d
 		else:
 			return ret

@@ -186,8 +186,8 @@ class WiFiManagerTestCase(TestCase):
 	def test_regLocalAndSend(self):
 
 		def send(result):
-			self.wifiTransport.datagramReceived('{"msg":"Hello"}', ('127.0.0.1', 10666))
-			self.d = deferLater( reactor, 1.0, res, None)
+			self.wifiTransport.datagramReceived('{"msg":"Hello", "dest":1}', ('127.0.0.1', 10666))
+			self.d = deferLater( reactor, .5, res, None)
 			return self.d
 
 		def res(result):

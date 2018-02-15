@@ -154,6 +154,64 @@ class ComTestCase(TestCase):
 
 		return self.client.d
 
+	def test_regUnregApp(self):
+		self.client.connect(Com.myPort)
+
+		def res(result):
+			self.assertTrue('success' in result['result'])
+			d = deferLater(reactor, .5, self.client.end) #delay ending because Com might still be working
+			return d
+
+		def nack(reason):
+			print reason
+			self.client.end()
+
+		def connected(obj):
+			obj.callRemote('cmd', {'cmd': 'reg_app', 'name':'hola','port':10666})
+			d = obj.callRemote('cmd', {'cmd': 'unreg_app', 'name':'hola'})
+			d.addCallbacks(res, nack)
+			#d.addCallback(lambda result: obj.broker.transport.loseConnection())
+
+			return d
+
+		self.client.d.addCallback(connected)
+
+		return self.client.d
+
+	def test_regAppTwice(self):
+		self.client.connect(Com.myPort)
+
+		def secondRes(result):
+			self.assertTrue('failure' in result['result'])
+			d = deferLater(reactor, .5, self.client.end) #delay ending because Com might still be working
+			return d
+
+		def res(result):
+			self.assertTrue('success' in result['result'])
+			
+			return result
+
+		def nack(reason):
+			print reason
+			self.client.end()
+
+		def connected(obj):
+			def sendAgain(result):
+				 d= obj.callRemote('cmd', {'cmd': 'reg_app', 'name':'hola','port':10666})
+				 d.addCallback(secondRes)
+				 return d
+
+			d = obj.callRemote('cmd', {'cmd': 'reg_app', 'name':'hola','port':10666})
+			d.addCallbacks(res, nack)
+			d.addCallback(sendAgain)
+			#d.addCallback(lambda result: obj.broker.transport.loseConnection())
+
+			return d
+
+		self.client.d.addCallback(connected)
+
+		return self.client.d
+
 	def test_regAppNoName(self):
 		self.client.connect(Com.myPort)
 
@@ -191,6 +249,29 @@ class ComTestCase(TestCase):
 
 		def connected(obj):
 			d = obj.callRemote('cmd', {'cmd': 'reg_app', 'name':'HOLA'})
+			d.addCallbacks(res, nack)
+			#d.addCallback(lambda result: obj.broker.transport.loseConnection())
+
+			return d
+
+		self.client.d.addCallback(connected)
+
+		return self.client.d
+
+	def test_regAppBadPort(self):
+		self.client.connect(Com.myPort)
+
+		def res(result):
+			self.assertTrue('failure' in result['result'])
+			d = deferLater(reactor, .5, self.client.end) #delay ending because Com might still be working
+			return d
+
+		def nack(reason):
+			print reason
+			self.client.end()
+
+		def connected(obj):
+			d = obj.callRemote('cmd', {'cmd': 'reg_app', 'name':'HOLA', 'port':'hello'})
 			d.addCallbacks(res, nack)
 			#d.addCallback(lambda result: obj.broker.transport.loseConnection())
 
@@ -356,7 +437,7 @@ class ComTestCase(TestCase):
 		message = {'msg':'hello','dest':1}
 
 		def res(result):
-			self.assertTrue(message['msg'] == result[0]['msg'] and 'success' in result[0]['result'])
+			self.assertTrue(message['msg'] == result['msg'] and 'success' in result['result'])
 			self.client.end()		
 
 		def nack(reason):
@@ -378,4 +459,94 @@ class ComTestCase(TestCase):
 		self.client.d.addCallbacks(connected, failed)
 
 		return self.client.d
+
+	def test_writeWiFi(self):
+		self.client.connect(Com.myPort)
+		self.dummy.stop()
+
+		message = {'msg':'hello','dest':1}
+
+		def res(result):
+			self.assertTrue(message['msg'] == result['msg'] and 'success' in result['result'])
+			self.client.end()		
+
+		def nack(reason):
+			reason.printTraceback()
+			self.client.end()
+			self.assertTrue(False)
+
+		def failed(reason):
+			print 'failed!'
+			print reason
+
+		def connected(obj):
+			d = deferLater(reactor, .5, obj.callRemote, 'write', message)
+			d.addCallbacks(res, nack)
+			d.addCallbacks(lambda result: obj.broker.transport.loseConnection(), nack)
+
+			return d
+
+		self.client.d.addCallbacks(connected, failed)
+
+		return self.client.d
+
+	def test_writeBoth(self):
+		self.client.connect(Com.myPort)
+
+		message = {'msg':'hello','dest':1}
+
+		def res(result):
+			self.assertTrue(message['msg'] == result['msg'] and 'success' in result['result'])
+			self.client.end()		
+
+		def nack(reason):
+			reason.printTraceback()
+			self.client.end()
+			self.assertTrue(False)
+
+		def failed(reason):
+			print 'failed!'
+			print reason
+
+		def connected(obj):
+			d = deferLater(reactor, .5, obj.callRemote, 'write', message)
+			d.addCallbacks(res, nack)
+			d.addCallbacks(lambda result: obj.broker.transport.loseConnection(), nack)
+
+			return d
+
+		self.client.d.addCallbacks(connected, failed)
+
+		return self.client.d
+
+	def test_commandGetNeighbors(self):
+		self.client.connect(Com.myPort)
+
+		command = {'cmd':'get_neighbors'}
+
+		def res(result):
+			self.assertTrue(isinstance(result['result'],list))
+			self.client.end()		
+
+		def nack(reason):
+			reason.printTraceback()
+			self.client.end()
+			self.assertTrue(False)
+
+		def failed(reason):
+			print 'failed!'
+			print reason
+
+		def connected(obj):
+			d = deferLater(reactor, .5, obj.callRemote, 'cmd', command)
+			d.addCallbacks(res, nack)
+			d.addCallbacks(lambda result: obj.broker.transport.loseConnection(), nack)
+
+			return d
+
+		self.client.d.addCallbacks(connected, failed)
+
+		return self.client.d
+
+
 
