@@ -32,8 +32,18 @@ class ComTestCase(TestCase):
 	def test_read(self):
 		#need to have additional Dummy radio running with client sending 'hello' messages to it
 		self.comlocal.setTimeout(5.0)
+		self.hit = False
 		def read(data):
+			self.hit = True
 			self.assertTrue('hello' in data['msg'])
+
 		self.comlocal.setReadCB(read)
 		self.comlocal.start()
 		time.sleep(1.0)
+		self.assertTrue(self.hit)
+
+	def test_getNeighborsEmpty(self):
+		self.comlocal.setTimeout(5.0)
+		self.comlocal.start()
+		res = self.comlocal.comCmd('get_neighbors')
+		self.assertTrue(isinstance(res['result'], list))

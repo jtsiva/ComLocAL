@@ -150,9 +150,9 @@ class _ComLocAL(pb.Root):
 			reason.printTraceback()
 
 		def connected(obj):
-			def closeAndReturn (result):
-				obj.broker.transport.loseConnection()
-				return result
+			# def closeAndReturn (result):
+			# 	obj.broker.transport.loseConnection()
+			# 	return result
 
 			d = obj.callRemote('write', msg)
 			d.addCallbacks(writeAck, failed)

@@ -60,6 +60,8 @@ class Dummy (pb.Root, NetworkLayer):
 		return message
 
 	def remote_read(self, message):
+		log.msg('received' + str(message))
+		message['sentby'] = 'unknown'
 		return self.sendToLocalReceivers(message)
 
 	def sendToLocalReceivers(self, message):
@@ -79,7 +81,7 @@ class Dummy (pb.Root, NetworkLayer):
 				return d
 
 			d = None
-
+			log.msg(self._localReceivers)
 			for port in self._localReceivers:
 				factory = pb.PBClientFactory()
 				connect = reactor.connectTCP("127.0.0.1", port, factory)
