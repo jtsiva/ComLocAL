@@ -353,50 +353,52 @@ class ComTestCase(TestCase):
 
 		return self.client.d
 
-	def test_readNoSentBy(self):
-		self.client.connect(Com.myPort)
 
-		def readRes(result):
-			self.assertTrue(result == None)
-			self.client.end()			
+	#2-27: I forgot that I decided that radios should fill out the sentby field
+	# def test_readNoSentBy(self):
+	# 	self.client.connect(Com.myPort)
 
-		def nack(reason):
-			print reason
-			self.client.end()
+	# 	def readRes(result):
+	# 		self.assertTrue(result == None)
+	# 		self.client.end()			
 
-		def connectAndRead(obj):
-			d = obj.callRemote('read', {'msg':'hello','dest':1,'app':'HOLA'})
-			d.addCallback(readRes)
-			return d
+	# 	def nack(reason):
+	# 		print reason
+	# 		self.client.end()
 
-		def newConnect(res):
-			self.client.end()
-			self.client.connect(Dummy.myPort)
-			self.client.d.addCallback(connectAndRead)
-			return self.client.d
+	# 	def connectAndRead(obj):
+	# 		d = obj.callRemote('read', {'msg':'hello','dest':1,'app':'HOLA'})
+	# 		d.addCallback(readRes)
+	# 		return d
 
-
-		def connected(obj):
-			d = obj.callRemote('cmd', {'cmd': 'reg_app', 'name':'HOLA'})
-			#d.addCallbacks(res, nack)
-			d.addCallbacks(lambda result: obj.broker.transport.loseConnection(), nack)
-			d.addCallback(newConnect)
+	# 	def newConnect(res):
+	# 		self.client.end()
+	# 		self.client.connect(Dummy.myPort)
+	# 		self.client.d.addCallback(connectAndRead)
+	# 		return self.client.d
 
 
-			return d
+	# 	def connected(obj):
+	# 		d = obj.callRemote('cmd', {'cmd': 'reg_app', 'name':'HOLA'})
+	# 		#d.addCallbacks(res, nack)
+	# 		d.addCallbacks(lambda result: obj.broker.transport.loseConnection(), nack)
+	# 		d.addCallback(newConnect)
 
-		self.client.d.addCallback(connected)
 
-		return self.client.d
+	# 		return d
+
+	# 	self.client.d.addCallback(connected)
+
+	# 	return self.client.d
 
 	def test_read(self):
 		self.client.connect(Com.myPort)
 
-		message = {'msg':'hello','sentby':'127.0.0.1','dest':1,'app':'HOLA'}
+		message = {'msg':'hello','sentby':'unknown','dest':1,'app':'HOLA'}
 
 		def readRes(result):
 			message['radio'] = 'Dummy'
-
+			
 			self.assertTrue(message == self.app.app.received)
 			self.client.end()			
 
@@ -408,6 +410,7 @@ class ComTestCase(TestCase):
 			d = obj.callRemote('read', message)
 			d.addCallback(readRes)
 			d.addCallback(lambda result: obj.broker.transport.loseConnection())
+			d.addErrback(lambda result: obj.broker.transport.loseConnection())
 			return d
 
 		def newConnect(res):
