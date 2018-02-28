@@ -4,13 +4,14 @@ from twisted.internet.defer import maybeDeferred, gatherResults
 
 from twisted.python import log
 
-from comlocal.radio.RadioManager import RadioManager
 from comlocal.util.NetworkLayer import NetworkLayer
 from comlocal.connection import ConnectionLayer
 from comlocal.routing import RoutingLayer
 from comlocal.message import MessageLayer
 import json
 import random
+import importlib
+
 
 class Com(pb.Root, NetworkLayer):
 	broadcastSinkID = -1
@@ -41,10 +42,6 @@ class Com(pb.Root, NetworkLayer):
 
 		self._ML.setReadCB(self._read)
 		self._ML.setWriteCB(self._RL.write)
-
-
-		self._radiosPending = {}
-		self._checkForRadios()
 	
 	#
 
@@ -65,9 +62,6 @@ class Com(pb.Root, NetworkLayer):
 				else:
 					port = self._registeredApplications.pop(cmd['name'])
 					cmd['result'] = self.success ('unregistered %s at %d' % (cmd['name'], port))
-			elif 'check_for_radios' == cmd['cmd']:
-				d = self._checkForRadios()
-				return d
 			else:
 				cmd = self._directCommToStack(cmd)
 
@@ -212,58 +206,3 @@ class Com(pb.Root, NetworkLayer):
 			self._RL.addNode(Com.broadcastSinkID)
 			self._RL.addLink(self._commonData['id'], Com.broadcastSinkID, 
 								radio, ConnectionLayer.Radio.broadcastAddr)
-
-	def _checkForRadios (self):
-		def regAck(result):
-			if 'success' in result['result']:
-				name = result['result'].split()[0] #name is in first part
-				props = self._radiosPending.pop(name)
-				self._setupRadio(name, props)
-
-		def regNack(reason):
-			log.msg(reason)
-
-		def connectedToRadio(obj):
-			regPacket = {'cmd':'reg_local','port':Com.myPort}
-			d = obj.callRemote('cmd', regPacket)
-			d.addCallbacks(regAck, regNack)
-			d.addCallback(lambda result: obj.broker.transport.loseConnection())
-
-		def failedToConnectToRadio(reason):
-			log.msg(self.failure(str(reason)))
-
-		def checkAck(result):
-			try:
-				log.msg(result)
-				for radio, props in result['result'].iteritems():
-					if radio not in self._CL.getRadioNames():
-						self._radiosPending[radio] = props
-						factory = pb.PBClientFactory()
-						reactor.connectTCP("127.0.0.1", props['port'], factory)
-						d = factory.getRootObject()
-						d.addCallbacks(connectedToRadio, failedToConnectToRadio)
-
-			except KeyError:
-				raise pb.Error
-
-		def checkNack(reason):
-			log.msg(reason)
-
-		def connected(obj):
-			regPacket = {'cmd': 'get_radios'}
-			d = obj.callRemote('cmd', regPacket)
-			d.addCallbacks(checkAck,checkNack)
-			d.addCallbacks(lambda result: obj.broker.transport.loseConnection(), checkNack)
-			return d
-
-		def failed(reason):
-			print self.failure(str(reason))
-
-		factory = pb.PBClientFactory()
-		reactor.connectTCP("127.0.0.1", RadioManager.myPort, factory)
-		d = factory.getRootObject()
-		d.addCallbacks(connected, failed)
-
-		log.msg('checking radio manager for radios')
-
-		return d

@@ -30,9 +30,7 @@ class RoutingLayer(NetworkLayer):
 		data is from the previous layer to handle the read
 
 		"""
-		if self._isPing(data):
-			self._handlePing(data)
-		elif self._needsForward(data):
+		if self._needsForward(data):
 			self._handleForward(data)
 		else:
 			if self._commonData['logging']['inUse']:

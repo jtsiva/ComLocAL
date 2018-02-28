@@ -2,104 +2,21 @@ from comlocal.util.NetworkLayer import NetworkLayer
 import time
 import json
 
-class Radio(object):
-	broadcastAddr ='<broadcast>'
+class RadioBuilder:
+	def build(name):
+		module = importlib.import_module('comlocal.radio.' + name + 'Manager')
+		manager = getattr(module, name+'Manager')
+		transport = getattr(module, name + 'Transport')
+		start = getattr(module, 'startTransport')
 
-	def __init__ (self, name, port):
-		self._connections = {Radio.broadcastAddr : 0}
+		mgr = manager()
+		trans = transport()
+		mgr.setTransport(trans)
+		trans.setManager(mgr)
 
-		self._name = name
-		self._port = port
-		self._writeCB = None
-		self._readCB = None
-		self.available = True #if there is something wrong below, we can change this
+		port = start(trans)
 
-	def __eq__(self,other):
-		if isinstance(other, Radio):
-			return self._name == other._name
-		elif isinstance(other, str):
-			return self._name == other
-
-	def __hash__(self):
-		return hash(self._name)
-
-	def getName(self):
-		return self._name
-
-	def getPort(self):
-		return self._port
-
-	def setReadCB (self, cb):
-		self._readCB = cb
-
-	def setWriteCB (self, cb):
-		self._writeCB = cb
-
-	def ping(self, connection = broadcastAddr, extra = None):
-		data = {'ping':''}
-		data['addr'] = connection
-
-		if extra is not None:
-			data['extra'] = extra
-
-		self.write(data)
-
-	def getConnections (self):
-		#LOCK
-		return self._connections.copy()
-		#UNLOCK
-
-	def addConnection(self, connection):
-		#LOCK
-		if connection not in self._connections:
-			self._connections[connection] = time.time()
-			#self.ping (connection)
-			#TODO: add'l to set up connection
-		#UNLOCK
-
-	def removeConnection (self, connection):
-		#LOCK
-		if connection in self._connections:
-			del self._connections[connection]
-		#UNLOCK
-
-		#TODO: add'l to close connection
-
-	def read(self, data):
-		#add/remove fields from data
-		#LOCK
-		self._connections[data['sentby']] = time.time()
-		#UNLOCK
-		self._readCB(data)
-
-	def _cleanOutoing (self, msg):
-		if 'sentby' in msg: #from forwarding
-			del msg['sentby']
-		if 'radios' in msg:
-			del msg['radios'] #for choosing how to send, but don't want to send this
-
-		return msg
-
-	def write(self, data):
-		#add/remove fields from data
-		data = self._cleanOutoing(data)
-		data['radio'] = self._port
-
-		self.addConnection(data['addr'])
-
-		return self._writeCB(data)
-
-	def connectionThreshold (self, cutoff):
-		#delete connections that have been idle longer than cutoff
-		toDelete = []
-		
-		for key, val in self._connections.iteritems():
-			if not val == 0 and time.time() - val > cutoff: #val is 0 for bcast only
-				toDelete.append(key)
-
-		for key in toDelete:
-			self.removeConnection(key)
-		
+		return type('Radio', (object,),{'name':name,'mgr':mgr,'trans':trans,'port':port})
 
 
 class ConnectionLayer(NetworkLayer):
@@ -112,13 +29,9 @@ class ConnectionLayer(NetworkLayer):
 	def __init__(self, commonData):
 		NetworkLayer.__init__(self, 'CL')
 		self._commonData = commonData
-		self.radios = set()
-		self._connectionPolicy = None
+		self.radios = []
 		self.checkRadios() #weed out any radios that are not *actually* active
 		
-		#TODO: decide if I need this
-		#self._commonData['activeRadios'] = [radio._name for radio in self.radios] #initialize commonData
-	
 		if self._commonData['logging']['inUse']:
 			self._commonData['logging']['connection'] = {'pings' : 0, 'sent': 0, 'received' : 0}
 	#
@@ -131,60 +44,46 @@ class ConnectionLayer(NetworkLayer):
 		pass
 	#
 
-	def setConnectionPolicy(self, func):
-		#defined by user. They get the radio list to work with to decide what to do
-		self._connectionPolicy = func
-
 	def runConnectionPolicy(self):
-		if self._connectionPolicy is not None:
-			self._connectionPolicy(self.radios)
+		for radio in radios:
+			for cxn in radio.mgr.connections:
+				pass
 
-	def addRadio(self, name, port):
-		#LOCK
-		newRad = Radio(name, port)
-		newRad.setReadCB(self.read)
-		newRad.setWriteCB(self.writeCB)
-		self.radios.add(newRad)
-		#UNLOCK
+	def addRadio(self, name):
+		try:
+			rad = RadioBuilder.build(name)
+			rad.mgr.setReadCB(self.read)
+			self.radios.append(rad)
+		except AttributeError:
+			#invalid name
+			pass
+		except Exception as e:
+			#maybe trying to start more than one of a given type
+			pass
 
+	# def removeRadio(self, name):
+	# 	#LOCK
+	# 	self.radios.remove(name)
+	# 	#UNLOCK
 
-	def removeRadio(self, name):
-		#LOCK
-		self.radios.remove(name)
-		#UNLOCK
-
-	def getRadio(self, name):
-		#LOCK
-		for radio in self.radios:
-			if radio.getName() == name:
-				return radio
-		#UNLOCK
-
-		return None
 
 
 	def getRadioNames(self):
-		#LOCK
-		return [rad.getName() for rad in self.radios]
-		#UNLOCK
+		return [rad.name for rad in self.radios]
 
-	def getRadioPorts(self):
-		#LOCK
-		return [rad.getPort() for rad in self.radios]
-		#UNLOCK
+	#USED BY COM RADIO SETUP
 
-	def isRadio (self, port):
-		#LOCK
-		for radio in self.radios:
-			if radio._port == port:
-				return True
-		#UNLOCK
+	# def isRadio (self, port):
+	# 	#LOCK
+	# 	for radio in self.radios:
+	# 		if radio._port == port:
+	# 			return True
+	# 	#UNLOCK
 
-		return False
+	# 	return False
 
-	def directCommTo(self, message, name):
-		self.getRadio(name).read(message)
 
+	#connection management functions - higher level operations
 	def ping(self, extra = None):
 		if self._commonData['logging']['inUse']:
 			self._commonData['logging']['connection']['pings'] += 1
@@ -193,7 +92,11 @@ class ConnectionLayer(NetworkLayer):
 			extraData.update(extra)
 
 		for radio in self.radios:
-			radio.ping(extraData)
+			radio.mgr.write(extraData)
+
+	def handlePing(self, msg):
+		#do things
+		pass
 
 	def read(self, msg):
 		"""
@@ -206,44 +109,65 @@ class ConnectionLayer(NetworkLayer):
 		
 		#
 
-		self.readCB(msg)
+
+		"""
+
+		update any other properties for connection
+
+		track multihop connections here?
+
+		0---1---2
+		if 0 is us then we have a connection with 1 AND 2
+
+		connection maintenance messages?
+
+		"""
+		if 'ping' in msg:
+			self.handlePing(msg)
+		else:
+			self.readCB(msg)
 	#
 
+	def cmd(self, cmd):
+		if 'get_connections' cmd['cmd']:
+			connections = {}
+			#aggregate all connections
+			for radio in self.radios:
+				for cxn in radio.mgr.connections:
+					connections[cxn] = radio.mgr.connections[cxn]
+
+			cmd['result'] = connections
+		else:
+			cmd['result'] = self.failure("unrecognized command %s" % cmd['cmd'])
+		return cmd
 
 	def write(self, msg):
 		"""
 		Write msg to radios
 
-		return true if successful, false otherwise
 		"""
-		everythingOkay = None
+		
 		try:
-			#if we don't recognize a command by the time it gets to the bottom
-			#of the stack then we can finally say we don't recognize it
+
 			if 'cmd' in msg:
-				msg['result'] = self.failure("unrecognized command %s" % msg['cmd'])
-				return msg
+				return self.cmd(msg)
+				
 			ret = []
-			for radio, addr in msg['radios']:
-				if radio in self.getRadioNames():
-					rad = self.getRadio(radio)
 
-					msg['addr'] = addr
-					if self._commonData['logging']['inUse']:
-						self._commonData['logging']['connection']['sent'] += 1
-					
-					ret.append(rad.write(msg))
-			# 		if 'failure' in ret['result']:
-			# 			everythingOkay = False
-			# 			# if 'result' not in msg:
-			# 			# 	msg['result'] = self.failure('')
+			for radioName, addr in msg['radios']:
+				for radio in self.radios:
+					if radioName == radio.name:
+						msg['addr'] = addr
 
-			# 			msg['result'] += self.failure(rad.getName() + ' ')
-			# 		else:
-			# 			everythingOkay = True
+						if self._commonData['logging']['inUse']:
+							self._commonData['logging']['connection']['sent'] += 1
+						#
 
-			# if everythingOkay is None:
-			# 	msg['result'] = self.failure("no radios registered")
+						ret.append(radio.write(msg))
+						
+					#
+				#
+			# 	
 			return ret
 		except Exception as e:
 			msg['result'] = self.failure(str(e))

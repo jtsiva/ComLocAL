@@ -10,131 +10,15 @@ import socket
 import fcntl
 import struct
 import json
+import time
 
-class WiFiManager (pb.Root, NetworkLayer):
-	myPort = 10249
+class WiFiManager (RadioManager):
 	def __init__ (self):
-		NetworkLayer.__init__(self, 'WiFi')
-		self._localReceivers = set()
-		self._registered = False
-
-		self.props = {}
-		self._setupProperties()
-
-		t = self.props['addr'].split('.')
-		t[-1] = '255'
-
-		self.broadcastAddr = '.'.join(t)
-
-		self.transport = None
-		self.tryToRegister = task.LoopingCall (self.sendRegistration)
-		self.tryToRegister.start(5.0)
-
-	#def startProtocol(self):
-		
-
-	def setTransport(self, transport):
-		self.transport = transport
-
-	def remote_cmd(self, cmd):
-		#log.msg('received command: %s' % cmd)
-		try:
-			if 'reg_local' == cmd['cmd']:
-				port = cmd['port']
-				self._localReceivers.add(port)
-				cmd['result'] = self.success('')
-			elif 'unreg_local' == cmd['cmd']:
-				port = cmd['port']
-				self._localReceivers.remove(port) #can't pop--it's a list
-				cmd['result'] = self.success('')
-			elif 'get_local' == cmd['cmd']:
-				cmd['result'] = self._localReceivers
-			elif 'check_radio_reg' == cmd['cmd']:
-				cmd['result'] = str(self._registered)
-			elif 'get_props' == cmd['cmd']:
-				cmd['result'] = self.props
-			elif 'allow_from_self' == cmd['cmd']:
-				self.transport.allowMsgFromSelf(True)
-			else:
-				cmd['result'] = self.failure("no command %s" % (cmd['cmd']))
-
-		except KeyError:
-			cmd['result'] = self.failure('poorly formatted command (missing a field?)')
-		except Exception as e:
-			raise pb.Error (e) 
-
-		return cmd
-
-	def remote_write(self, message):
-		try:
-			#message['sentby'] = self.props['addr']
-			addr = message.pop('addr')
-			self.transport.write(message, addr)
-			message['result'] = self.success('')
-		except KeyError:
-			message['result'] = self.failure('missing "addr" field')
-		except Exception as e:
-			raise pb.Error(e)
-		return message
-
-	def sendToLocalReceivers(self, message):
-		if 'sentby' in message and 'msg' in message and 'dest' in message:
-			message['radio'] = self.name
-
-			def readAck(result):
-				return result #hooray?
-
-			def readNack(reason):
-				log.msg(reason) #not hooray
-
-			def connected(obj):
-				d = obj.callRemote('read', message)
-				d.addCallbacks(readAck,readNack)
-				d.addCallback(lambda result: obj.broker.transport.loseConnection())
-				return d
-
-			for port in self._localReceivers:
-				factory = pb.PBClientFactory()
-				connect = reactor.connectTCP("127.0.0.1", port, factory)
-				d = factory.getRootObject()
-				d.addCallback(connected)
-		else:
-			pass
-			#drop poorly formed packets
-
-	def _getLocalReceivers(self):
-		return self._localReceivers
-
-	def sendRegistration (self):
-
-		def regAck(result):
-			self._registered = True
-			self.tryToRegister.stop()
-
-		def regNack(reason):
-			log.msg(reason)
-
-		def connected(obj):
-			regPacket = {'cmd':'reg_radio','name':self.name,'props':self.props}
-			d = obj.callRemote('cmd', regPacket)
-			d.addCallbacks(regAck,regNack)
-			d.addCallback(lambda result: obj.broker.transport.loseConnection())
-			return d
-
-		def failed(reason):
-			log.msg(reason)
-
-		factory = pb.PBClientFactory()
-		self.radMgrConnect = reactor.connectTCP("127.0.0.1", RadioManager.myPort, factory)
-		d = factory.getRootObject()
-		d.addCallbacks(connected, failed)
-
-		log.msg('registering with RadioManager')
-
-		return d
+		RadioManager.__init__(self, 'WiFi')
 
 	def _get_ip_address(self, ifname):
 		"""
+			Helper function
 			Return ip address of interface:
 			https://raspberrypi.stackexchange.com/questions/6714/how-to-get-the-raspberry-pis-ip-address-for-ssh
 		"""
@@ -158,6 +42,11 @@ class WiFiManager (pb.Root, NetworkLayer):
 		self.props['maxPacketLength'] = 4096
 		self.props['costPerByte'] = 1
 		self.props['port'] = WiFiManager.myPort
+
+		t = self.props['addr'].split('.')
+		t[-1] = '255'
+
+		self.props['bcastAddr'] = '.'.join(t)
 
 
 
@@ -184,18 +73,23 @@ class WiFiTransport (DatagramProtocol):
 
 
 	def datagramReceived(self, data, (host, port)):
-		log.msg(data + " from %s %d" % (host, port))
+		#log.msg(data + " from %s %d" % (host, port))
 		
 		#don't do anything if not set up or if manager has already
 		#been gc'd
 		if self.manager is not None: 
-			log.msg('I am: %s' % self.manager.props['addr'])
+			#log.msg('I am: %s' % self.manager.props['addr'])
 
 			if (not host == self.manager.props['addr']) or self.allowFromSelf:
 				try:
 					message = json.loads(data)
+
+					#append connection information
 					message['sentby'] = host
-					self.manager.sendToLocalReceivers(message)
+
+					self.manager.read(message)
 				except ValueError:
 					pass #drop poorly formed packets
 
+def startTransport(theTransportObj):
+	return reactor.listenUDP(WiFiTransport.myPort, theTransportObj)
