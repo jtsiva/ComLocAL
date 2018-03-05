@@ -1,4 +1,4 @@
-from comlocal.radio.RadioManager import RadioManager
+from comlocal.radio.RadioManager import RadioManager, RadioTransport
 import json
 
 class LoopbackManager (RadioManager):
@@ -10,25 +10,21 @@ class LoopbackManager (RadioManager):
 		"""
 		Set up the radio properties we might need
 		"""
-		self.props['addr'] = '<loopback>'
-		self.props['bcastAddr'] = '<broadcast>'
-		self.props['maxPacketLength'] = 15000
-		self.props['costPerByte'] = .5
+		props = {}
+		props['addr'] = '<loopback>'
+		props['bcastAddr'] = '<broadcast>'
+		props['costPerByte'] = .5
 
-class LoopbackTransport(object):
-	def __init__(self):
-		self.manager = None
+		return props
 
-	def setManager (self, manager):
-		self.manager = manager
-
-	def write(self, message):
+class LoopbackTransport(RadioTransport):
+	def write(self, message, addr):
 		self.read(json.dumps(message))
 
-	def read(self, data)
+	def read(self, data):
 		if self.manager is not None:
 			message = json.loads(data)
-			message['sentby'] = 'loopback'
+			message['sentby'] = self.manager.props['addr']
 
 			self.manager.read(message)
 

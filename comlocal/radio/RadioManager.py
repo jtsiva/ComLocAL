@@ -1,6 +1,6 @@
 from twisted.python import log
-
 from comlocal.util.NetworkLayer import NetworkLayer
+import time
 
 
 class RadioManager (NetworkLayer):
@@ -28,12 +28,12 @@ class RadioManager (NetworkLayer):
 		}
 
 		"""
-		pass
+		return {}
 
 	def setTransport(self, transport):
 		self.transport = transport
 
-	def getStatus(self):
+	def _getStatus(self):
 		return {'running':True}
 
 	def cmd(self, cmd):
@@ -41,10 +41,8 @@ class RadioManager (NetworkLayer):
 		try:
 			if 'get_props' == cmd['cmd']:
 				cmd['result'] = self.props
-			elif 'allow_from_self' == cmd['cmd']:
-				self.transport.allowMsgFromSelf(True)
-			elif 'getStatus' == cmd['cmd']:
-				cmd['result'] = self.getStatus()
+			elif 'get_status' == cmd['cmd']:
+				cmd['result'] = self._getStatus()
 			else:
 				cmd['result'] = self.failure("no command %s" % (cmd['cmd']))
 
@@ -61,21 +59,36 @@ class RadioManager (NetworkLayer):
 			message['result'] = self.success('')
 		except KeyError:
 			message['result'] = self.failure('missing "addr" field')
+		except Exception as e:
+			message['result'] = self.failure(str(e))
 	
 		return message
 
 	def read (self, message):
+		
 		#update things about connections from Transport class
 		if message['sentby'] not in self.connections:
 			self.connections[message['sentby']] = {}
 
 		self.connections[message['sentby']]['time'] = time.time()
 
-		self.readCB(message)
+		if self.readCB is not None:
+			self.readCB(message)
 
 	def setReadCB (self, cb):
 		#use this callback in transport implemented for the radio
 		self.readCB = cb
 
+class RadioTransport(object):
+	def __init__(self):
+		self.manager = None
 
+	def setManager (self, manager):
+		self.manager = manager
+
+	def write(self, message, addr):
+		pass
+
+	def read(self, message):
+		pass
 

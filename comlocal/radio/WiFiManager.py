@@ -4,8 +4,7 @@ from twisted.internet.protocol import ServerFactory, DatagramProtocol
 
 from twisted.spread import pb
 from twisted.python import log
-from comlocal.radio.RadioManager import RadioManager
-from comlocal.util.NetworkLayer import NetworkLayer
+from comlocal.radio.RadioManager import RadioManager, RadioTransport
 import socket
 import fcntl
 import struct
@@ -33,54 +32,50 @@ class WiFiManager (RadioManager):
 		"""
 		Set up the radio properties we might need
 		"""
+		props = {}
+
 		try:
-			self.props['addr'] = self._get_ip_address('wlan0')
+			props['addr'] = self._get_ip_address('wlan0')
 		except IOError:
 			#my laptop has a different form
-			self.props['addr'] = self._get_ip_address('wlp1s0')
+			props['addr'] = self._get_ip_address('wlp1s0')
 
-		self.props['maxPacketLength'] = 4096
-		self.props['costPerByte'] = 1
-		self.props['port'] = WiFiManager.myPort
 
-		t = self.props['addr'].split('.')
+		props['maxPacketLength'] = 4096
+		props['costPerByte'] = 1
+
+		t = props['addr'].split('.')
 		t[-1] = '255'
 
-		self.props['bcastAddr'] = '.'.join(t)
+		props['bcastAddr'] = '.'.join(t)
+
+		return props
 
 
 
-class WiFiTransport (DatagramProtocol):
+class WiFiTransport (DatagramProtocol, RadioTransport):
 	myPort = 10248
-
-	def __init__(self):
-		self.manager = None
 
 	def startProtocol (self):
 		self.transport.setBroadcastAllowed(True)
-		self.allowFromSelf = False
-		
-
-	def allowMsgFromSelf(self, b):
-		self.allowFromSelf = b
-
-	def setManager (self, manager):
-		self.manager = manager
 
 	def write (self, message, addr):
 		data = json.dumps(message, separators=(',', ':'))
 		self.transport.write(data, (addr, WiFiTransport.myPort))
 
+	def read(self, message):
+		if self.manager is not None: 
+			self.datagramReceived(json.dumps(message), ('<loopback>', WiFiTransport.myPort))
 
 	def datagramReceived(self, data, (host, port)):
 		#log.msg(data + " from %s %d" % (host, port))
-		
+		#print data + " from %s %d" % (host, port)
 		#don't do anything if not set up or if manager has already
 		#been gc'd
 		if self.manager is not None: 
 			#log.msg('I am: %s' % self.manager.props['addr'])
 
-			if (not host == self.manager.props['addr']) or self.allowFromSelf:
+			if not host == self.manager.props['addr']:
 				try:
 					message = json.loads(data)
 
