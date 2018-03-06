@@ -61,19 +61,17 @@ def main():
 			# print 'hello'
 			# log.msg('hello')
 			if thing.writes == count:
-				lc.stop()
 				d = myCom.stop()
 				d.addCallbacks(lambda res: reactor.stop(), failed)
 			else:
-				myCom.write('hello', dest)
-				thing.writeRes()
+				d = myCom.write('hello', dest)
+				d.addCallback(lambda res: thing.writeRes())
+				d.addCallback(lambda res: reactor.callLater(period, writeThing))
 
-			#return d
-
-		lc = LoopingCall(writeThing)
+			return d
 
 		d = myCom.start()
-		d.addCallbacks(lambda res: lc.start(period), failed)
+		d.addCallbacks(lambda res: reactor.callLater(period, writeThing), failed)
 	else:
 		myCom.start()
 
