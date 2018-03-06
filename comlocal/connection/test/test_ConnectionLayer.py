@@ -39,6 +39,11 @@ class ConnectionLayerTestCase(TestCase):
 		except ValueError:
 			self.assertTrue(True)
 
+	def test_cmdGetRadioProps(self):
+		self.cl.addRadio('Loopback')
+		res = self.cl.write({'cmd':'get_radio_props','name':'Loopback'})['result']
+		self.assertTrue(res)
+
 
 	def test_addBadRadio(self):
 		self.cl.addRadio('Thing')
@@ -108,7 +113,7 @@ class ConnectionLayerTestCase(TestCase):
 		self.cl.setReadCB(self.frame.read)
 		self.cl.write({"msg":"hello", "radios":[("Loopback", "<loopback>"), ("WiFi", "127.0.0.1")]})
 		
-		d=deferLater(reactor, .1, blah)
+		d=deferLater(reactor, .3, blah)
 		return d
 
 	def test_cmdPing(self):

@@ -29,13 +29,14 @@ class Com(pb.Root, NetworkLayer):
 		self._RL = RoutingLayer.RoutingLayer(self._commonData)
 		self._RL.addNode(Com.broadcastSinkID)
 
-		self._ML = MessageLayer.MessageLayer(self._commonData)
+		for radioName in self._commonData['startRadios']:
+			self._setupRadio(radioName)
 
-		#add radios (will also track ports)
+		self._ML = MessageLayer.MessageLayer(self._commonData)
 
 		#set up connections between layers
 		self._CL.setReadCB(self._RL.read)
-		self._CL.setWriteCB(self._write)
+		#self._CL.setWriteCB(self._write)
 
 		self._RL.setReadCB(self._ML.read)
 		self._RL.setWriteCB(self._CL.write)
@@ -44,6 +45,9 @@ class Com(pb.Root, NetworkLayer):
 		self._ML.setWriteCB(self._RL.write)
 	
 	#
+
+	def stop(self):
+		self._CL.cleanupRadios()
 
 	def remote_cmd(self, cmd):
 		try:
@@ -74,42 +78,11 @@ class Com(pb.Root, NetworkLayer):
 
 		return cmd
 
-	def remote_read(self, msg):
-		return self._directCommToRadio(msg, msg['radio'])
 
 	def remote_write(self, msg):
 		ret = self._directCommToStack(msg)
 
-		def checkResults(results):
-			temp = results[0]
-			success = True
-			for res in results:
-				if 'failure' in res['result']:
-					log.msg(res['result'].split()[0] + ' failed')
-					success = False
-					
-
-			if not success:
-				temp['result'] = self.failure('not all radios successful')
-			else:
-				temp['result'] = self.success('')
-
-			return temp
-
-
-		if isinstance(ret, list):
-			d = gatherResults(ret)
-			d.addCallback(checkResults)
-			return d
-		else:
-			return ret
-
-	def _isRadio(self, port):
-		return self._CL.isRadio(port)
-
-	def _directCommToRadio(self, message, name):
-		#log.msg('from radio ')
-		self._CL.directCommTo(message, name)
+		return ret
 
 	def _directCommToStack (self, message):
 		if 'msg' in message:
@@ -136,7 +109,7 @@ class Com(pb.Root, NetworkLayer):
 		else:
 			self._commonData['id'] = random.randrange(255)
 			self._commonData['location'] = [0,0,0]
-			self._commonData['startRadios'] = ['WiFi', 'BT']
+			self._commonData['startRadios'] = ['WiFi', 'Loopback']
 			self._commonData['activeRadios'] = []
 
 		self._commonData['logging'] = {'inUse': False} if not log else {'inUse': True}
@@ -157,7 +130,7 @@ class Com(pb.Root, NetworkLayer):
 			return d
 
 
-		if 'app' in msg:
+		if 'app' in msg and msg['app'] in self._registeredApplications:
 			factory = pb.PBClientFactory()
 			reactor.connectTCP("127.0.0.1", self._registeredApplications[msg['app']], factory)
 			d = factory.getRootObject()
@@ -171,38 +144,10 @@ class Com(pb.Root, NetworkLayer):
 
 		#return d
 
-	def _write(self, msg):
-		#print msg
-		port = msg.pop('radio')
 
-		def writeAck(result):
-			#print self.success(str(result))
-			return result
-
-		def failed(reason):
-			log.msg(self.failure (str(reason)))
-			reason.printTraceback()
-
-		def connected(obj):
-			def closeAndReturn (res):
-				obj.broker.transport.loseConnection()
-				return res
-			d = obj.callRemote('write', msg)
-			d.addCallbacks(writeAck, failed)
-			d.addCallbacks(closeAndReturn, failed)
-
-			return d
-
-		factory = pb.PBClientFactory()
-		reactor.connectTCP("127.0.0.1", port, factory)
-		d = factory.getRootObject()
-		d.addCallbacks(connected, failed)
-
-		return d
-
-	def _setupRadio (self, radio, props):
-		if not self._CL.isRadio(props['port']):
-			self._CL.addRadio(radio,props['port'])
-			self._RL.addNode(Com.broadcastSinkID)
-			self._RL.addLink(self._commonData['id'], Com.broadcastSinkID, 
-								radio, ConnectionLayer.Radio.broadcastAddr)
+	def _setupRadio (self, radioName):
+		self._CL.addRadio(radioName)
+		bcastAddr = self._CL.write({'cmd':'get_radio_props', 'name':radioName})['result']['bcastAddr']
+		self._RL.addNode(Com.broadcastSinkID)
+		self._RL.addLink(self._commonData['id'], Com.broadcastSinkID, 
+							radioName, bcastAddr)

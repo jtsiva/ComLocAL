@@ -147,6 +147,10 @@ class ConnectionLayer(NetworkLayer):
 			cmd['result'] = res
 		elif 'check_radios' == cmd['cmd']:
 			cmd['result'] = self._checkRadios()
+		elif 'get_radio_props' == cmd['cmd']:
+			for radio in self.radios:
+				if radio.name == cmd['name']:
+					cmd['result'] = radio._mgr.cmd({'cmd':'get_props'})['result']
 		else:
 			cmd['result'] = self.failure("unrecognized command %s" % cmd['cmd'])
 		return cmd
@@ -162,8 +166,8 @@ class ConnectionLayer(NetworkLayer):
 			if 'cmd' in msg:
 				return self.cmd(msg)
 				
+			radios = msg.pop('radios')
 			message = msg.copy()
-			radios = message.pop('radios')
 			message['result'] = []
 			for radioName, addr in radios:
 				for radio in self.radios:
