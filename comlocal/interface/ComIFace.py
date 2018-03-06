@@ -43,6 +43,7 @@ class _ComIFace(pb.Root):
 	def __init__(self, iface):
 		self.iface = iface
 		self.port = self.iface.port
+		self.obj = None
 
 	def register(self):
 		def regAck(result):
@@ -53,16 +54,20 @@ class _ComIFace(pb.Root):
 			print reason
 
 		def connected(obj):
+			self.obj = obj
 			regPacket = {'cmd': 'reg_app', 'name':self.iface.name,'port':self.port}
 			d = obj.callRemote('cmd', regPacket)
 			d.addCallbacks(regAck,failed)
-			d.addCallbacks(lambda result: obj.broker.transport.loseConnection(), failed)
+			#d.addCallbacks(lambda result: obj.broker.transport.loseConnection(), failed)
 			return d
 
-		factory = pb.PBClientFactory()
-		reactor.connectTCP("127.0.0.1", Com.myPort, factory)
-		d = factory.getRootObject()
-		d.addCallbacks(connected, failed)
+		if self.obj is None:
+			factory = pb.PBClientFactory()
+			reactor.connectTCP("127.0.0.1", Com.myPort, factory)
+			d = factory.getRootObject()
+			d.addCallbacks(connected, failed)
+		else:
+			d = connected(self.obj)
 
 		return d
 
@@ -75,16 +80,20 @@ class _ComIFace(pb.Root):
 			print reason
 
 		def connected(obj):
+			self.obj = obj
 			regPacket = {'cmd': 'unreg_app', 'name':self.iface.name,'port':self.iface.port}
 			d = obj.callRemote('cmd', regPacket)
 			d.addCallbacks(regAck,failed)
-			d.addCallbacks(lambda result: obj.broker.transport.loseConnection(), failed)
+			#d.addCallbacks(lambda result: obj.broker.transport.loseConnection(), failed)
 			return d
 
-		factory = pb.PBClientFactory()
-		reactor.connectTCP("127.0.0.1", Com.myPort, factory)
-		d = factory.getRootObject()
-		d.addCallbacks(connected, failed)
+		if self.obj is None:
+			factory = pb.PBClientFactory()
+			reactor.connectTCP("127.0.0.1", Com.myPort, factory)
+			d = factory.getRootObject()
+			d.addCallbacks(connected, failed)
+		else:
+			d = connected(self.obj)
 
 		return d
 
@@ -98,6 +107,7 @@ class _ComIFace(pb.Root):
 			reason.printTraceback()
 
 		def connected(obj):
+			self.obj = obj
 			# def closeAndReturn (result):
 			# 	obj.broker.transport.loseConnection()
 			# 	return result
@@ -108,10 +118,13 @@ class _ComIFace(pb.Root):
 
 			return d
 
-		factory = pb.PBClientFactory()
-		reactor.connectTCP("127.0.0.1", Com.myPort, factory)
-		d = factory.getRootObject()
-		d.addCallbacks(connected, failed)
+		if self.obj is None:
+			factory = pb.PBClientFactory()
+			reactor.connectTCP("127.0.0.1", Com.myPort, factory)
+			d = factory.getRootObject()
+			d.addCallbacks(connected, failed)
+		else:
+			d = connected(self.obj)
 
 		return d
 
@@ -126,8 +139,9 @@ class _ComIFace(pb.Root):
 			reason.printTraceback()
 
 		def connected(obj):
+			self.obj = obj
 			def closeAndReturn (result):
-				obj.broker.transport.loseConnection()
+				#obj.broker.transport.loseConnection()
 				return result
 
 			d = obj.callRemote('cmd', cmd)
@@ -136,10 +150,13 @@ class _ComIFace(pb.Root):
 
 			return d
 
-		factory = pb.PBClientFactory()
-		reactor.connectTCP("127.0.0.1", Com.myPort, factory)
-		d = factory.getRootObject()
-		d.addCallbacks(connected, failed)
+		if self.obj is None:
+			factory = pb.PBClientFactory()
+			reactor.connectTCP("127.0.0.1", Com.myPort, factory)
+			d = factory.getRootObject()
+			d.addCallbacks(connected, failed)
+		else:
+			d = connected(self.obj)
 
 		return d
 

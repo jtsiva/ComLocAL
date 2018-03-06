@@ -66,7 +66,7 @@ def main():
 			else:
 				d = myCom.write('hello', dest)
 				d.addCallback(lambda res: thing.writeRes())
-				d.addCallback(lambda res: reactor.callLater(period, writeThing))
+				d.addCallbacks(lambda res: reactor.callLater(period, writeThing),lambda res: reactor.callLater(period, writeThing))
 
 			return d
 
@@ -76,6 +76,7 @@ def main():
 		myCom.start()
 
 	reactor.run()
+	print thing.writes
 #
 
 if __name__ == "__main__":
