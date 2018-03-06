@@ -81,6 +81,7 @@ class Com(pb.Root, NetworkLayer):
 
 	def remote_write(self, msg):
 		ret = self._directCommToStack(msg)
+		log.msg(ret)
 
 		return ret
 
