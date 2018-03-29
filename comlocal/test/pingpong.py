@@ -1,57 +1,79 @@
 #!/usr/bin/python
 
-from comlocal.core import Com 
-import json
-import sys
-import pdb
+from comlocal.interface import ComLocALIFace
 import time
+import argparse
 
+last = time.time()
+sender = True
+txAck = True
 
-def readHandler(msg):
-	readHandler.count += 1
-	readHandler.go = True
-	print json.dumps(msg, sort_keys=True, indent=4, separators=(',', ': '))
+class myThing(object):
+	def __init__(self):
+		self.read = 0
+		self.cmdRes = 0
+		self.writeRes = 0
+
+	def reader(self, msg):
+		
+		self.read += 1
+		if self.read % 100 == 0:
+			print msg
+		sender = True
+		
+		
+
+	def result(self, msg):
+		#print msg
+		if 'cmd' in msg:
+			self.cmdRes += 1
+		elif 'msg' in msg:
+			txAck = True
+			self.writeRes += 1
 
 def main():
-	com = Com.Com()
-	readHandler.count = 0
-	readHandler.go = False
-	com.setReadHandler(readHandler)
-	com.start()
+	parser = argparse.ArgumentParser()
+	parser.add_argument ("-c", "--count", required = True, help="set the number messages that sender should send")
+	parser.add_argument ("-f", "--first", action="store_true", default=False, help="set whether this device will send first")
+	parser.add_argument ("-d", "--dest", required = True, help="set the destination for the message")
+
+
+	args =  parser.parse_args()
+
+	thing = myThing()
+	myCom = ComLocALIFace.ComLocAL('TEST')
+	myCom.setReadCB (thing.reader)
+	myCom.setResultCB (thing.result)
+
+	count = int(args.count)
+	sender = args.first
+	txAck = True
+	dest = int(args.dest)
+
+	msg = {'type':'msg','msg':'hello','dest':dest}
 
 	try:
+		last = time.time()
+		myCom.start()
+		writes = 0
 
-		#set up read callback
-
-		pings = int(sys.argv[1]) if len(sys.argv) > 1 else 1000
-
-		msg = json.loads('{"type":"msg"}')
-		starttime = time.time()
-		while pings > 0:
-			if readHandler.go: #don't send unless we've received
-				msg['payload'] =  pings
-				com.write(msg)
-				pings -= 1
-				starttime = time.time()
-				readHandler.go = False
-			elif time.time() - starttime > 1.0:
-				readHandler.go = True
-			else:
-				time.sleep(0)
-		#
-
-		while True:
-			pass
+		while count > writes:
+			if sender or (not txAck and (time.time() - last) > .5):
+				myCom.comWrite(msg)
+				txAck = False
+				writes += 1
+				sender = False
+				last = time.time()
 	except KeyboardInterrupt:
-		pass
-	finally:
-		com.stop()
+		print ''
+	except Exception as e:
+		print e
 
-	print readHandler.count
+	print 'reads: %i, writes: %i, cmd: %i' % (thing.read, writes, thing.cmdRes)
 
 
 #
 
 if __name__ == "__main__":
-	#pdb.set_trace()
+
 	main()

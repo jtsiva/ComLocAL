@@ -1,169 +1,194 @@
-
-from comlocal.radio import Radio
-import threading
-from multiprocessing import Lock
+from comlocal.util.NetworkLayer import NetworkLayer
 import time
 import json
-import logging
-import pdb
+import importlib
 
-class Stats(object):
-	def __init__(self):
-		self.read = 0
-		self.write = 0
-		self.lastUsed = 0
-		self.packetsDropped = 0 #poorly formed packets
-		self.up = True
+class RadioBuilder:
+	#https://stackoverflow.com/questions/12674080/what-is-the-most-efficient-way-to-dynamically-create-class-instances
+	def build(self, name):
+		module = importlib.import_module('comlocal.radio.' + name + 'Manager')
+		manager = getattr(module, name+'Manager')
+		transport = getattr(module, name + 'Transport')
+		start = getattr(module, 'startTransport')
 
-class ConnectionLayer(object):
+		mgr = manager()
+		trans = transport()
+		mgr.setTransport(trans)
+		trans.setManager(mgr)
+
+		port = start(trans)
+
+		return type('Radio', (object,),{'name':name,'write':mgr.write, '_mgr':mgr,'_trans':trans,'port':port})
+
+
+class ConnectionLayer(NetworkLayer):
 	"""
-	This class is responsible for implementing network protocols,
-	maintaining connections, and managing the state of the hardware
+	This class is responsible for maintaining connections 
+	(and managing the state of the hardware?)
 
 	"""
 
-	def __init__(self, commonData, radioList):
+	def __init__(self, commonData):
+		NetworkLayer.__init__(self, 'CL')
 		self._commonData = commonData
-		self._radioList = radioList #prioritized list of radio objects
-		self._radioStats = {}
-		for radio in self._radioList:
-			self._radioStats[radio._name] = Stats()
-		#
-
+		self.radios = []
+		self.pings = 0 #temporary
 		self._checkRadios() #weed out any radios that are not *actually* active
-		self._commonData['activeRadios'] = [radio._name for radio in self._radioList] #initialize commonData
-	
-		self._radioLock = Lock()
+		
+		if self._commonData['logging']['inUse']:
+			self._commonData['logging']['connection'] = {'pings' : 0, 'sent': 0, 'received' : 0}
 	#
 
 	def _checkRadios(self):
 		"""
 		Check if radios are properly functioning
-		TODO: implement
+		
 		"""
-		pass
+		res = []
+		for radio in self.radios:
+			entry = {'name': radio.name}
+			entry.update(radio._mgr.cmd({'cmd':'get_status'})['result'])
+			res.append(entry)
+
+		return res
 	#
 
-	def start(self, delay):
-		"""
-		Start sending out a ping to let other devices know
-		we're here. Delay, in seconds, between pings set by delay (float possible)
-		"""
-		if self._commonData['logging']['inUse']:
-			self._commonData['logging']['connection'] = {'pings' : 0, 'sent': 0, 'received' : 0}
+	def runConnectionPolicy(self):
+		for radio in radios:
+			for cnx in radio._mgr.connections:
+				pass
 
-		for radio in self._radioList:
-			radio.start()
-		self._pingDelay = delay
-		self._runPing = True
-		self._ping() #start pinging
-
-	def stop(self):
-		for radio in self._radioList:
-			radio.stop()
-		self._runPing = False
-		if self._commonData['logging']['inUse']:
-			logging.info('ConnectionLayer Summary: pingsSnt %d, sent %d, received %d', \
-				self._commonData['logging']['connection']['pings'],\
-				self._commonData['logging']['connection']['sent'],\
-				self._commonData['logging']['connection']['received'])
-			#print summary information for this layer
+	def addRadio(self, name):
+		try:
+			if name not in self.getRadioNames():
+				rad = RadioBuilder().build(name)
+				rad._mgr.setReadCB(self.read)
+				self.radios.append(rad)
+			else:
+				raise ValueError("duplicate radio name '{0}' found".format(name))
+		except ImportError as e:
+			#invalid name
+			#print 'invalid name ' + str(e)
 			pass
 
-	def _ping(self):
+	def cleanupRadios(self):
+		for rad in self.radios:
+			if rad.port is not None:
+				port, rad.port = rad.port, None
+				port.stopListening()
+
+	def getRadioNames(self):
+		return [rad.name for rad in self.radios]
+
+	#connection management functions - higher level operations
+	def _ping(self, extra = None):
+		if self._commonData['logging']['inUse']:
+			self._commonData['logging']['connection']['pings'] += 1
+
+		message = {'ping':{'id':self._commonData['id']}}
+
+		if extra is not None:
+			message.update(extra)
+
+	
+		for radio in self.radios:
+			props = radio._mgr.cmd({'cmd':'get_props'})['result']
+			message['addr'] = props['bcastAddr']
+			radio.write(message)
+		
+		return self.success('')
+
+	def _handlePing(self, msg):
 		"""
-		Send basic "Hello!" message on all radios
+		update any other properties for connection
+
+		track multihop connections here?
+
+		0---1---2
+		if 0 is us then we have a connection with 1 AND 2
+
+		connection maintenance messages?
+
 		"""
+		self.pings+=1
 
-		ping = json.loads('{"type":"ping"}')
-		ping['src'] = self._commonData['id']
-
-		with self._radioLock:
-			for radio in self._radioList:
-				radio.write(ping)
-				if self._commonData['logging']['inUse']:
-					self._commonData['logging']['connection']['pings'] += 1
-				if self._commonData['logging']['inUse']:
-					logging.debug('connection--pinging on %s', radio._name)
-			#
-		#
-
-		if self._runPing:
-			#reschedule for later only if runPing is true
-			threading.Timer(self._pingDelay, self._ping).start()
-	#
-
-
-
-	def _addRadioField(self, msg, radioName):
+	def read(self, msg):
 		"""
-		Add a field to the message indicating which interface the message
-		arrived on.
-		"""
-		try:
-			del msg['radios'] #appended by sender but not needed on read
-		except Exception as e:
-			pass #do nothing (this *might* be useful later)
-
-		msg['radio'] = radioName
-		return msg
-
-
-	def read(self):
-		"""
-		Read from each radio and return all objects. Filter and handle
-		pings as this level.
-
-		Non-blocking
+		Count total messages received and callback
 
 		TODO: exception handling for broken things
 		"""
-		data = []
-
-		for radio in self._radioList:
-			msg = radio.read()
-			if msg is not None:
-				try:
-					if msg['sentby'] != radio.getProperties().addr:
-						if self._commonData['logging']['inUse']:
-							self._commonData['logging']['connection']['received'] += 1
-						data.append(self._addRadioField(msg, radio._name))
-				except KeyError:
-					pass		
+		if self._commonData['logging']['inUse']:
+			self._commonData['logging']['connection']['received'] += 1
+		
 		#
 
-		return data
+		if 'ping' in msg:
+			self._handlePing(msg)
+		else:
+			self.readCB(msg)
 	#
 
-	def chooseRadios(self, msg):
-		"""
-		Return an ordered list of which radios should be used based
-		on the message contents (length of msg, QoS req's, possible
-		restrictions, etc)
+	def cmd(self, cmd):
+		if 'get_connections' == cmd['cmd']:
+			connections = {}
+			#aggregate all connections
+			for radio in self.radios:
+				for cxn in radio._mgr.connections:
+					connections[cxn] = radio._mgr.connections[cxn]
 
-		TODO: make more sophisticated
-		"""
-		return self._radioList
+			cmd['result'] = connections
+		elif 'ping' == cmd['cmd']:
+			extra = None
+			if 'extra' in cmd:
+				extra = {}
+				extra['extra'] = cmd['extra']
+			res = self._ping(extra)
+			cmd['result'] = res
+		elif 'check_radios' == cmd['cmd']:
+			cmd['result'] = self._checkRadios()
+		elif 'get_radio_props' == cmd['cmd']:
+			for radio in self.radios:
+				if radio.name == cmd['name']:
+					cmd['result'] = radio._mgr.cmd({'cmd':'get_props'})['result']
+		else:
+			cmd['result'] = self.failure("unrecognized command %s" % cmd['cmd'])
+		return cmd
 
 	def write(self, msg):
 		"""
 		Write msg to radios
 
-		return true if successful, false otherwise
 		"""
+		
 		try:
-			with self._radioLock:
-				for radio in filter(lambda x: x._name in msg['radios'], self._radioList):
-					if radio.getProperties().maxPacketLength >= len(msg):
-						radio.write(msg)
+
+			if 'cmd' in msg:
+				return self.cmd(msg)
+				
+			radios = msg.pop('radios')
+			message = msg.copy()
+			message['result'] = []
+			for radioName, addr in radios:
+				for radio in self.radios:
+					if radioName == radio.name:
+
+						msg['addr'] = addr
+
 						if self._commonData['logging']['inUse']:
 							self._commonData['logging']['connection']['sent'] += 1
+						#
+
+						message['result'].append(radio.write(msg)['result'])
+						
 					#
 				#
-			#
-			return True
+			# 	
+			return message
 		except Exception as e:
-			return False
+			msg['result'] = self.failure(str(e))
+
+		return msg
 
 		
 

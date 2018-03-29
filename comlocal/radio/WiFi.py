@@ -75,7 +75,7 @@ class WiFi (Radio.Radio):
 		"""
 
 		try:
-			res = self._wSock.sendto(json.dumps(data), self._broadcastAddr)
+			res = self._wSock.sendto(self._asString(data), self._broadcastAddr)
 		except Exception as e:
 			raise e
 		#

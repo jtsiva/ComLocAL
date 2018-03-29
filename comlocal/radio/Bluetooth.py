@@ -78,31 +78,22 @@ class Bluetooth (Radio.Radio):
 		self._sock.close()
 
 	def start(self):
-		# self._threadRunning = True
-		# self._readThread.start()
-		err = self._bluez.hci_le_set_scan_enable(
-		    self._sock.fileno(),
-		    1,  # 1 - turn on;  0 - turn off
-		    0, # 0-filtering disabled, 1-filter out duplicates
-		    1000  # timeout
-		)
-		if err < 0:
-			errnum = get_errno()
-			raise Exception("{} {}".format(
-			    errno.errorcode[errnum],
-			    os.strerror(errnum)
-			))
+		FNULL = open(os.devnull, 'w')
+
+		onCmd = 'hcitool -i hci0 cmd 0x08 0x000C 0x01 0x00'
+		try:
+			subprocess.call(onCmd, shell=True, stdout=FNULL, stderr=subprocess.STDOUT)
+		except Exception as e:
+			raise e
 
 	def stop(self):
-		# self._threadRunning = False
-		# self._readThread.join()
-		self._bluez.hci_le_set_scan_enable(
-		    self._sock.fileno(),
-		    0,  # 1 - turn on;  0 - turn off
-		    0, # 0-filtering disabled, 1-filter out duplicates
-		    1000  # timeout
-		)
+		FNULL = open(os.devnull, 'w')
 
+		offCmd = 'hcitool -i hci0 cmd 0x08 0x000C 0x00 0x00'
+		try:
+			subprocess.call(offCmd, shell=True, stdout=FNULL, stderr=subprocess.STDOUT)
+		except Exception as e:
+			raise e
 
 	def _setupProperties(self):
 		"""
@@ -189,7 +180,7 @@ class Bluetooth (Radio.Radio):
 		"""
 		FNULL = open(os.devnull, 'w')
 
-		payload = ' '.join("{0:02X}".format(ord(x)) for x in json.dumps(data))
+		payload = ' '.join("{0:02X}".format(ord(x)) for x in self._asString(data))
 		length =  ''.join("{0:02X}".format(len(payload.split()) + 3))
 		total = ''.join("{0:02X}".format(len(payload.split()) + 7))
 

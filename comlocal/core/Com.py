@@ -1,85 +1,108 @@
+from twisted.internet import reactor, defer
+from twisted.spread import pb
+from twisted.internet.defer import maybeDeferred, gatherResults
 
-from comlocal.radio import WiFi, Bluetooth
+from twisted.python import log
+
+from comlocal.util.NetworkLayer import NetworkLayer
 from comlocal.connection import ConnectionLayer
 from comlocal.routing import RoutingLayer
-from comlocal.util import CommonData
 from comlocal.message import MessageLayer
-import random
-import Queue
-import threading
-import logging
 import json
+import random
+import importlib
 
-class Com(object):
-	def __init__(self, log = False, logFile = 'com.log', configFile = None):
 
-		if log:
-			logging.basicConfig(filename=logFile, filemode='w', level=logging.INFO, format='%(asctime)s %(message)s', datefmt='%I:%M:%S %p')
+class Com(pb.Root, NetworkLayer):
+	broadcastSinkID = -1
+	myPort = 10257
 
+	def __init__(self, log = False, configFile = None, authFile = None):
+		NetworkLayer.__init__(self, 'Com')
+		self._authFile = authFile
+		self._registeredApplications = {}
 
 		self._commonData = {}
 		self._initCommonData(log, configFile)
 
-		self._connL = ConnectionLayer.ConnectionLayer(self._commonData, self._getRadios())
-		self._routeL = RoutingLayer.RoutingLayer(self._commonData)
-		self._messageL = MessageLayer.MessageLayer(self._commonData)
+		self._CL = ConnectionLayer.ConnectionLayer(self._commonData)
+		self._RL = RoutingLayer.RoutingLayer(self._commonData)
+		self._RL.addNode(Com.broadcastSinkID)
+
+		for radioName in self._commonData['startRadios']:
+			self._setupRadio(radioName)
+
+		self._ML = MessageLayer.MessageLayer(self._commonData)
 
 		#set up connections between layers
-		self._routeL.setRead(self._connL.read)
-		self._routeL.setWrite(self._connL.write)
+		self._CL.setReadCB(self._RL.read)
+		#self._CL.setWriteCB(self._write)
 
-		self._messageL.setRead(self._routeL.read)
-		self._messageL.setWrite(self._routeL.write)
+		self._RL.setReadCB(self._ML.read)
+		self._RL.setWriteCB(self._CL.write)
 
-		#for allowing non-blocking writes and an async read callback
-		#TODO: decide if we actually *need* buffering
-		self._inQ = Queue.Queue()
-		self._outQ = Queue.Queue()
-
-		self._readHandler = None
-
-		self._readThread = threading.Thread(target=self._procRead)
-		self._writeThread = threading.Thread(target=self._procWrite)
+		self._ML.setReadCB(self._read)
+		self._ML.setWriteCB(self._RL.write)
 	
 	#
 
-	def __del__(self):
-		pass#self.stop() #can't guarantee this will be called, but this is here jic
-
-	def start(self):
-		self._connL.start(1)
-		self._routeL.start(3,3)
-
-		self._threadsRunning = True
-		self._readThread.start()
-		self._writeThread.start()
-
 	def stop(self):
-		self._connL.stop()
-		self._routeL.stop()
+		self._CL.cleanupRadios()
+		for key, val in self._registeredApplications.iteritems():
+			if val['obj'] is not None:
+				self._registeredApplications[key]['obj'].broker.transport.loseConnection()
+				self._registeredApplications[key]['obj'] = None
 
-		self._threadsRunning = False
-		self._readThread.join()
-		self._writeThread.join()
-		if self._commonData['logging']['inUse']:
-			#print summary information for this layer
-			pass
+	def remote_cmd(self, cmd):
+		try:
+			if 'reg_app' == cmd['cmd']:
+				#only use 4 char for name (just in case they sent more)
+				if cmd['name'][:4] in self._registeredApplications:
+					cmd['result'] = self.failure('app already registered with that name')
+				elif not isinstance(cmd['port'], int):
+					cmd['result'] = self.failure('port needs to be a number')
+				else:
+					self._registeredApplications[cmd['name'][:4]] = {'port': cmd['port'], 'obj':None}
+					cmd['result'] = self.success('')
+			elif 'unreg_app' == cmd['cmd']:
+				if cmd['name'] not in self._registeredApplications:
+					cmd['result'] = self.failure('no app with that name registered')
+				else:
+					stuff = self._registeredApplications.pop(cmd['name'])
+					cmd['result'] = self.success ('unregistered %s at %d' % (cmd['name'], stuff['port']))
+			else:
+				cmd = self._directCommToStack(cmd)
+
+		except KeyError:
+			cmd['result'] = self.failure("poorly formed message")
+		except Exception as e:
+			raise pb.Error(e)
+
+		log.msg(cmd)
+
+		return cmd
 
 
+	def remote_write(self, msg):
+		ret = self._directCommToStack(msg)
+		log.msg(ret)
 
-	def _procRead(self):
+		return ret
+
+	def _directCommToStack (self, message):
+		if 'msg' in message:
+			message['radios'] = self._chooseRadios()
+			#log.msg(message['radios'])
+		return self._ML.write(message)
+
+	def _chooseRadios(self):
 		"""
-		Call the read handler on each message received
-		"""
-		
-		while self._threadsRunning:
-			for msg in self._messageL.read():
-				if self._readHandler is not None:
-					self._readHandler(msg)
+		TODO: radio selection scheme. Make more intelligent
 
-	def _procWrite(self):
-		while self._threadsRunning:
-			pass
+		Maybe RL can override decision?
+		"""
+		return self._CL.getRadioNames()
+
 
 	def _initCommonData(self, log, configFile):
 		"""
@@ -91,58 +114,62 @@ class Com(object):
 		else:
 			self._commonData['id'] = random.randrange(255)
 			self._commonData['location'] = [0,0,0]
-			self._commonData['startRadios'] = ['WiFi', 'BT']
+			self._commonData['startRadios'] = ['WiFi', 'Loopback']
 			self._commonData['activeRadios'] = []
 
 		self._commonData['logging'] = {'inUse': False} if not log else {'inUse': True}
 	#
 
+	def _read(self, msg):
+		def readAck(result):
+			return result
 
-	def _getRadios(self):
-		"""
-		List of radios to initialize and pass to connection manager.
+		def readNack(reason):
+			log.msg(reason)
+
 		
-		TODO: Read radio list from config file
-		"""
-		radios = []
-		if 'WiFi' in self._commonData['startRadios']:
-			radios.append(WiFi.WiFi())
-		
-		if 'BT' in self._commonData['startRadios']:
-			radios.append(Bluetooth.Bluetooth())
-		#
-		
-		return radios
+		if 'app' in msg and msg['app'] in self._registeredApplications:
 
-	def setID(self, uniqueID):
-		"""
-		Set the unique ID by which this node can be distinguished
-		"""
-		self._commonData = uniqueID #need to sanitize?
+			def connected(obj):
+				self._registeredApplications[msg['app']]['obj'] = obj
+				d = obj.callRemote('read', msg)
+				d.addCallbacks(readAck, readNack)
+				#d.addCallbacks(lambda result: obj.broker.transport.loseConnection(), readNack)
 
-	def setReadHandler(self, cb):
-		"""
-		Read handler callback needs to accept the message as an arg
-		"""
-		self._readHandler = cb
+				return d
+
+			if self._registeredApplications[msg['app']]['obj'] is None:
+				factory = pb.PBClientFactory()
+				reactor.connectTCP("127.0.0.1", self._registeredApplications[msg['app']]['port'], factory)
+				d = factory.getRootObject()
+				d.addCallback(connected)
+			else:
+				connected(self._registeredApplications[msg['app']]['obj'])
+		else:
+			for key, val in self._registeredApplications.iteritems():
+				def connected(obj):
+					self._registeredApplications[key]['obj'] = obj
+					d = obj.callRemote('read', msg)
+					d.addCallbacks(readAck, readNack)
+					#d.addCallbacks(lambda result: obj.broker.transport.loseConnection(), readNack)
+
+					return d
 
 
-	def read(self):
-		"""
-		Non-blocking read
+				if val['obj'] is None:
+					factory = pb.PBClientFactory()
+					reactor.connectTCP("127.0.0.1", val['port'], factory)
+					d = factory.getRootObject()
+					d.addCallback(connected)
+				else:
+					connected(val['obj'])
 
-		Returns list of messages as json objects (can return empty list)
-		
-		DEPRECATED: only use if NOT using .start/.stop
-		"""
-		return self._messageL.read()
+		#return d
 
-	def write(self, msg):
-		"""
-		Write message as json object
 
-		returns True if successful, False otherwise
-		"""
-		return self._messageL.write(msg)
-
-#
+	def _setupRadio (self, radioName):
+		self._CL.addRadio(radioName)
+		bcastAddr = self._CL.write({'cmd':'get_radio_props', 'name':radioName})['result']['bcastAddr']
+		self._RL.addNode(Com.broadcastSinkID)
+		self._RL.addLink(self._commonData['id'], Com.broadcastSinkID, 
+							radioName, bcastAddr)

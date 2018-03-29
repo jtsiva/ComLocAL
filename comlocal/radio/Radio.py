@@ -1,4 +1,5 @@
 from comlocal.util import Properties
+import json
 
 class Radio(object):
 	"""
@@ -26,6 +27,9 @@ class Radio(object):
 		Read from radio and return json object
 		"""
 		pass
+
+	def _asString(self, msg):
+		return json.dumps(msg, separators=(',', ':'))
 
 	def write(self, data):
 		"""
