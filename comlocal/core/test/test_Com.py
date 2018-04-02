@@ -247,7 +247,7 @@ class ComTestCase(TestCase):
 	def test_read(self):
 		self.client.connect(Com.myPort)
 
-		message = {'msg':'hello','dest':1,'app':'hola'}
+		message = {'msg':'hello','src':-1,'dest':1,'app':'hola'}
 
 		def blah():
 			self.assertTrue(self.app.app.received)
@@ -276,7 +276,7 @@ class ComTestCase(TestCase):
 	def test_readNoApp(self):
 		self.client.connect(Com.myPort)
 
-		message = {'msg':'hello','dest':1}
+		message = {'msg':'hello','src':-1,'dest':1}
 
 		def blah():
 			self.assertTrue(self.app.app.received)
