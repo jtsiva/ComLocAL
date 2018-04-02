@@ -63,12 +63,27 @@ class Com(pb.Root, NetworkLayer):
 					cmd['result'] = self.failure('port needs to be a number')
 				else:
 					self._registeredApplications[cmd['name'][:4]] = {'port': cmd['port'], 'obj':None}
+
+					def connected(obj):
+						self._registeredApplications[cmd['name'][:4]]['obj'] = obj
+						return cmd
+
+					factory = pb.PBClientFactory()
+					reactor.connectTCP("127.0.0.1", self._registeredApplications[cmd['name'][:4]]['port'], factory)
+					d = factory.getRootObject()
+					d.addCallback(connected)
+
 					cmd['result'] = self.success('')
+
+					return d
+
+
 			elif 'unreg_app' == cmd['cmd']:
 				if cmd['name'] not in self._registeredApplications:
 					cmd['result'] = self.failure('no app with that name registered')
 				else:
 					stuff = self._registeredApplications.pop(cmd['name'])
+					stuff['obj'].broker.transport.loseConnection()
 					cmd['result'] = self.success ('unregistered %s at %d' % (cmd['name'], stuff['port']))
 			else:
 				cmd = self._directCommToStack(cmd)
@@ -127,43 +142,20 @@ class Com(pb.Root, NetworkLayer):
 
 		def readNack(reason):
 			log.msg(reason)
-
 		
 		if 'app' in msg and msg['app'] in self._registeredApplications:
+			d = self._registeredApplications[msg['app']]['obj'].callRemote('read', msg)
+			d.addCallbacks(readAck, readNack)
 
-			def connected(obj):
-				self._registeredApplications[msg['app']]['obj'] = obj
-				d = obj.callRemote('read', msg)
+			return d
+
+		else:
+			for key, val in self._registeredApplications.iteritems():
+				d = val['obj'].callRemote('read', msg)
 				d.addCallbacks(readAck, readNack)
-				#d.addCallbacks(lambda result: obj.broker.transport.loseConnection(), readNack)
 
 				return d
 
-			if self._registeredApplications[msg['app']]['obj'] is None:
-				factory = pb.PBClientFactory()
-				reactor.connectTCP("127.0.0.1", self._registeredApplications[msg['app']]['port'], factory)
-				d = factory.getRootObject()
-				d.addCallback(connected)
-			else:
-				connected(self._registeredApplications[msg['app']]['obj'])
-		else:
-			for key, val in self._registeredApplications.iteritems():
-				def connected(obj):
-					self._registeredApplications[key]['obj'] = obj
-					d = obj.callRemote('read', msg)
-					d.addCallbacks(readAck, readNack)
-					#d.addCallbacks(lambda result: obj.broker.transport.loseConnection(), readNack)
-
-					return d
-
-
-				if val['obj'] is None:
-					factory = pb.PBClientFactory()
-					reactor.connectTCP("127.0.0.1", val['port'], factory)
-					d = factory.getRootObject()
-					d.addCallback(connected)
-				else:
-					connected(val['obj'])
 
 		#return d
 
