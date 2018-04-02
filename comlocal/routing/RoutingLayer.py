@@ -118,6 +118,7 @@ class RoutingLayer(NetworkLayer):
 	def _handleForward(self, msg):
 		if self._commonData['logging']['inUse']:
 			self._commonData['logging']['routing']['fwd'] += 1
+		msg.pop("sentby") #strip from message
 		self.write(msg)
 	#
 
