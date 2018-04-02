@@ -310,6 +310,37 @@ class ComTestCase(TestCase):
 
 		return self.client.d
 
+	def test_readBlacklist(self):
+		self.client.connect(Com.myPort)
+
+		self.com._commonData['blacklist'] = ['127.0.0.1']
+
+		message = {'msg':'hello','msgId':1,'src':0,'dest':1,'app':'hola'}
+
+		def blah():
+			self.assertTrue(not self.app.app.received)
+
+		def res(result):
+			self.assertTrue('success' in result['result'])
+			self.udpclient.write(message)
+			d = deferLater(reactor, .5, blah)
+			return d
+
+		def nack(reason):
+			print reason
+			self.client.end()
+
+		def connected(obj):
+			d = obj.callRemote('cmd', {'cmd': 'reg_app', 'name':'hola','port':10666})
+			d.addCallbacks(res, nack)
+			#d.addCallback(lambda result: obj.broker.transport.loseConnection())
+
+			return d
+
+		self.client.d.addCallback(connected)
+
+		return self.client.d
+
 	def test_readConsecutiveMsgId(self):
 		self.client.connect(Com.myPort)
 
