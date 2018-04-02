@@ -123,10 +123,20 @@ class ConnectionLayer(NetworkLayer):
 		
 		#
 
-		if 'ping' in msg:
-			self._handlePing(msg)
-		else:
-			self.readCB(msg)
+		#drop if address is blacklisted
+		try:
+			drop = False
+			if msg['sentby'] in self._commonData['blacklist']:
+				drop = True
+		except KeyError:
+			#blacklist not set up
+			pass
+
+		if not drop:
+			if 'ping' in msg:
+				self._handlePing(msg)
+			else:
+				self.readCB(msg)
 	#
 
 	def cmd(self, cmd):

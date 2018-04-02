@@ -127,7 +127,8 @@ class RoutingLayer(NetworkLayer):
 		
 		TODO: add actual routing algorithms here
 		"""
-		msg['src'] = self._commonData['id']
+		if 'src' not in msg:
+			msg['src'] = self._commonData['id']
 
 		#https://stackoverflow.com/questions/15644684/best-practices-for-querying-graphs-by-edge-and-node-attributes-in-networkx
 		#red = ((u,v) for u,v,d in G.edges(data=True) if d['color']=='red')
