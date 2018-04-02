@@ -134,7 +134,15 @@ class RoutingLayer(NetworkLayer):
 		#red = ((u,v) for u,v,d in G.edges(data=True) if d['color']=='red')
 		radioList = []
 		#LOCK
-		for radio in msg['radios']:
+
+		#if we don't have a list of radios to use then choose on our own
+		if 'radios' not in msg:
+			radios = self._commonData['startRadios']
+		else:
+			radios = msg['radios']
+
+		#find the routes associated with these radios
+		for radio in radios:
 			radioList += ([d['radio'], d['address']] for u,v,d in self._networkGraph.edges(data=True) if d['radio'] == radio)
 		#UNLOCK
 
