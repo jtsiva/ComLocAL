@@ -116,7 +116,7 @@ def main():
 		print "sent %d messages in %f seconds" % (thing.writes, thing.lastTime - thing.start)
 		print "payload throughput: %f bytes per second" % ((thing.writes * len(args.message)) / (thing.lastTime - thing.start))
 		with open('run.txt', 'w') as f:
-			f.write(thing.lastTime - thing.start)
+			f.write("%f" % (thing.lastTime - thing.start))
 #
 
 if __name__ == "__main__":
