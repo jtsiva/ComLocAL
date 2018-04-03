@@ -24,18 +24,18 @@ class RoutingLayer(NetworkLayer):
 		self._costFunction(self._networkGraph.copy(as_view=True))
 		#UNLOCK
 
-	def read(self, data):
+	def read(self, msg):
 		"""
 		To be used as a callback
 		data is from the previous layer to handle the read
 
 		"""
-		if self._needsForward(data):
-			self._handleForward(data)
-		else:
+		if self._needsForward(msg):
+			self._handleForward(msg)
+		elif msg['src'] != self._commonData['id']: #don't want to receive own message
 			if self._commonData['logging']['inUse']:
 				self._commonData['logging']['routing']['msgRcv'] += 1
-			self.readCB(data)
+			self.readCB(msg)
 
 
 	def addLink(self, id1, id2, rad, addr):
@@ -110,6 +110,7 @@ class RoutingLayer(NetworkLayer):
 		Check if the message is intended for this node or not
 		"""
 		try:
+			#we don't want to forward a message WE sent in the first place
 			return msg['dest'] != self._commonData['id'] and msg['src'] != self._commonData['id']
 		except KeyError:
 			return False

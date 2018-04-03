@@ -407,7 +407,7 @@ class ComTestCase(TestCase):
 		self.client.connect(Com.myPort)
 
 		message1 = {'msg':'hello','msgId':1,'src':0,'dest':1}
-		message2 = {'msg':'hello','msgId':1,'src':1,'dest':1}
+		message2 = {'msg':'hello','msgId':1,'src':2,'dest':1}
 
 		def blah():
 			self.assertTrue(len(self.app.app.received) == 2)
