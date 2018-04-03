@@ -17,14 +17,23 @@ class myThing(object):
 		self.readyToSend = False
 		self.max = 0
 		self.start = None
+		self.last = 0
+		self.lastTime = None
 
 	def reader(self, msg):
+		now = time.time()
 		if 0 == self.read:
-			self.start = time.time()
+			self.start = now
 
 		self.read += 1
-		if self.read == self.max:
-			print 'received %d in %f seconds' % (self.max, time.time() - self.start)
+		self.lastTime = now
+		
+
+	def printRes(self):
+		if self.lastTime and self.start:
+			print 'received %d in %f seconds' % (self.read, self.lastTime - self.start)
+		else:
+			print 'nothing received'
 
 	def writeRes(self):
 		#log.msg(msg)
@@ -33,9 +42,9 @@ class myThing(object):
 
 def main():
 	parser = argparse.ArgumentParser()
-	parser.add_argument ("-c", "--count", required = True, help="set the number messages that sender should send")
+	parser.add_argument ("-c", "--count", required = False, help="set the number messages that sender should send")
 	parser.add_argument ("-s", "--sender", action="store_true", default=False, help="set whether this device will send")
-	parser.add_argument ("-d", "--dest", required = True, help="set the destination for the message")
+	parser.add_argument ("-d", "--dest", required = False, help="set the destination for the message")
 	parser.add_argument ("-p", "--period", required = False, help="time between writes in seconds (float)")
 
 
@@ -46,16 +55,17 @@ def main():
 	myCom = ComIFace.ComIFace('TEST',10789)
 	myCom.readCB = thing.reader
 	
-	count = int(args.count)
+	count = int(args.count) if args.count is not None else None
 	sender = args.sender
-	dest = int(args.dest)
+	dest = int(args.dest) if args.dest is not None else None
 	period = float(args.period) if args.period is not None else .001
 
-	thing.max = count
+	last = 0
+
+	def failed(reason):
+		print reason
 
 	if sender:
-		def failed(reason):
-			print reason
 
 		def writeThing():
 			# print 'hello'
@@ -73,10 +83,21 @@ def main():
 		d = myCom.start()
 		d.addCallbacks(lambda res: reactor.callLater(period, writeThing), failed)
 	else:
-		myCom.start()
+
+		def check():
+			if thing.last == thing.read:
+				d = myCom.stop()
+				d.addCallback(lambda res: thing.printRes())
+				d.addCallbacks(lambda res: reactor.stop(), failed)
+			else:
+				thing.last = thing.read
+				reactor.callLater(period, check)
+
+		d = myCom.start()
+		d.addCallbacks(lambda res: reactor.callLater(period, check), failed)
 
 	reactor.run()
-	print thing.writes
+	print "sent %d messages" % thing.writes
 #
 
 if __name__ == "__main__":
