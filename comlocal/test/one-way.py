@@ -40,7 +40,7 @@ class myThing(object):
 			print 'total throughput: %f bytes per second' % ((self.totalSize * self.read) / (self.lastTime - self.start))
 			print 'payload throughput: %f bytes per second' % ((self.msgSize * self.read) / (self.lastTime - self.start))
 			with open('run.txt', 'w') as f:
-				f.write("%d,%f,%f" % (self.read, self.lastTime - self.start, (self.totalSize * self.read) / (self.lastTime - self.start)))
+				f.write("%d,%f,%f\n" % (self.read, self.lastTime - self.start, (self.totalSize * self.read) / (self.lastTime - self.start)))
 
 		else:
 			print 'nothing received'
@@ -116,7 +116,7 @@ def main():
 		print "sent %d messages in %f seconds" % (thing.writes, thing.lastTime - thing.start)
 		print "payload throughput: %f bytes per second" % ((thing.writes * len(args.message)) / (thing.lastTime - thing.start))
 		with open('run.txt', 'w') as f:
-			f.write("%f" % (thing.lastTime - thing.start))
+			f.write("%f\n" % (thing.lastTime - thing.start))
 #
 
 if __name__ == "__main__":
