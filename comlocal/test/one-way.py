@@ -19,10 +19,14 @@ class myThing(object):
 		self.start = None
 		self.last = 0
 		self.lastTime = None
+		self.msgSize = 0
+		self.totalSize = 0
 
 	def reader(self, msg):
 		now = time.time()
 		if 0 == self.read:
+			self.totalSize = len(json.dumps(msg, separators=(',', ':')))
+			self.msgSize = len(msg['msg'])
 			self.start = now
 
 		self.read += 1
@@ -31,13 +35,17 @@ class myThing(object):
 
 	def printRes(self):
 		if self.lastTime and self.start:
-			print 'received %d in %f seconds' % (self.read, self.lastTime - self.start)
+			print 'received %d messages in %f seconds' % (self.read, self.lastTime - self.start)
+			print 'total throughput: %f bytes per second' % ((self.totalSize * self.read) / (self.lastTime - self.start))
+			print 'payload throughput: %f bytes per second' % ((self.msgSize * self.read) / (self.lastTime - self.start))
 		else:
 			print 'nothing received'
 
 	def writeRes(self):
-		#log.msg(msg)
-		last = time.time()
+		now = time.time()
+		if 0 == self.writes:
+			self.start = now
+		self.lastTime = now
 		self.writes += 1
 
 def main():
@@ -46,6 +54,7 @@ def main():
 	parser.add_argument ("-s", "--sender", action="store_true", default=False, help="set whether this device will send")
 	parser.add_argument ("-d", "--dest", required = False, help="set the destination for the message")
 	parser.add_argument ("-p", "--period", required = False, help="time between writes in seconds (float)")
+	parser.add_argument ("-m", "--message", required = False, help="message to send")
 
 
 	args =  parser.parse_args()
@@ -60,7 +69,7 @@ def main():
 	dest = int(args.dest) if args.dest is not None else None
 	period = float(args.period) if args.period is not None else .001
 
-	last = 0
+	start = None
 
 	def failed(reason):
 		print reason
@@ -74,13 +83,15 @@ def main():
 				d = myCom.stop()
 				d.addCallbacks(lambda res: reactor.stop(), failed)
 			else:
-				d = myCom.write('hello', dest)
+				toSend = args.message if args.message is not None else 'hello'
+				d = myCom.write(toSend, dest)
 				d.addCallback(lambda res: thing.writeRes())
 				d.addCallbacks(lambda res: reactor.callLater(period, writeThing),lambda res: reactor.callLater(period, writeThing))
 
 			return d
 
 		d = myCom.start()
+		thing.start = time.time()
 		d.addCallbacks(lambda res: reactor.callLater(period, writeThing), failed)
 	else:
 
@@ -97,7 +108,8 @@ def main():
 		d.addCallbacks(lambda res: reactor.callLater(period, check), failed)
 
 	reactor.run()
-	print "sent %d messages" % thing.writes
+	print "sent %d messages in %f seconds" % (thing.writes, thing.lastTime - thing.start)
+	print "payload throughput: %f bytes per second" % ((thing.writes * len(args.message)) / (thing.lastTime - thing.start))
 #
 
 if __name__ == "__main__":
