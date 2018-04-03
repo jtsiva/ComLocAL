@@ -109,8 +109,9 @@ def main():
 		d.addCallbacks(lambda res: reactor.callLater(period, check), failed)
 
 	reactor.run()
-	print "sent %d messages in %f seconds" % (thing.writes, thing.lastTime - thing.start)
-	print "payload throughput: %f bytes per second" % ((thing.writes * len(args.message)) / (thing.lastTime - thing.start))
+	if sender:
+		print "sent %d messages in %f seconds" % (thing.writes, thing.lastTime - thing.start)
+		print "payload throughput: %f bytes per second" % ((thing.writes * len(args.message)) / (thing.lastTime - thing.start))
 #
 
 if __name__ == "__main__":
