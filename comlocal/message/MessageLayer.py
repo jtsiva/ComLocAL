@@ -6,9 +6,18 @@ class MessageLayer(NetworkLayer):
 		NetworkLayer.__init__(self, 'ML')
 		self._commonData = commonData
 		self._msgId = 0
+		self._cache = []
+		self._windowSize = 128
 
-	def read(self, data):
-		self.readCB( data)
+	def read(self, msg):
+		#drop duplicate messages
+		if (msg['src'],msg['msgId']) not in self._cache:
+			#only maintain a fixed number of messages to check against
+			if len(self._cache) == self._windowSize:
+				self._cache.pop(0)
+
+			self._cache.append((msg['src'],msg['msgId']))
+			self.readCB( msg)
 
 	def _addMsgId(self, msg):
 		"""

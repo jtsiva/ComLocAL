@@ -1,5 +1,7 @@
 *.pyc
 *.egg-info
+*.log
 *.log.*
 *.coverage
 *_trial_marker
+*.lock

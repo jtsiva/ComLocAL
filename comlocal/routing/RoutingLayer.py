@@ -24,18 +24,18 @@ class RoutingLayer(NetworkLayer):
 		self._costFunction(self._networkGraph.copy(as_view=True))
 		#UNLOCK
 
-	def read(self, data):
+	def read(self, msg):
 		"""
 		To be used as a callback
 		data is from the previous layer to handle the read
 
 		"""
-		if self._needsForward(data):
-			self._handleForward(data)
-		else:
+		if self._needsForward(msg):
+			self._handleForward(msg)
+		elif msg['src'] != self._commonData['id']: #don't want to receive own message
 			if self._commonData['logging']['inUse']:
 				self._commonData['logging']['routing']['msgRcv'] += 1
-			self.readCB(data)
+			self.readCB(msg)
 
 
 	def addLink(self, id1, id2, rad, addr):
@@ -110,6 +110,7 @@ class RoutingLayer(NetworkLayer):
 		Check if the message is intended for this node or not
 		"""
 		try:
+			#we don't want to forward a message WE sent in the first place
 			return msg['dest'] != self._commonData['id'] and msg['src'] != self._commonData['id']
 		except KeyError:
 			return False
@@ -118,6 +119,7 @@ class RoutingLayer(NetworkLayer):
 	def _handleForward(self, msg):
 		if self._commonData['logging']['inUse']:
 			self._commonData['logging']['routing']['fwd'] += 1
+		msg.pop("sentby") #strip from message
 		self.write(msg)
 	#
 
@@ -127,13 +129,22 @@ class RoutingLayer(NetworkLayer):
 		
 		TODO: add actual routing algorithms here
 		"""
-		msg['src'] = self._commonData['id']
+		if 'src' not in msg:
+			msg['src'] = self._commonData['id']
 
 		#https://stackoverflow.com/questions/15644684/best-practices-for-querying-graphs-by-edge-and-node-attributes-in-networkx
 		#red = ((u,v) for u,v,d in G.edges(data=True) if d['color']=='red')
 		radioList = []
 		#LOCK
-		for radio in msg['radios']:
+
+		#if we don't have a list of radios to use then choose on our own
+		if 'radios' not in msg:
+			radios = self._commonData['startRadios']
+		else:
+			radios = msg['radios']
+
+		#find the routes associated with these radios
+		for radio in radios:
 			radioList += ([d['radio'], d['address']] for u,v,d in self._networkGraph.edges(data=True) if d['radio'] == radio)
 		#UNLOCK
 

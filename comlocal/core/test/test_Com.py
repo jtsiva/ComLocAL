@@ -51,9 +51,9 @@ class Client (object):
 
 class app(pb.Root):
 	def __init__(self):
-		self.received = None
+		self.received = []
 	def remote_read(self, message):
-		self.received = message
+		self.received.append(message)
 
 class App(object):
 	def __init__(self):
@@ -75,7 +75,7 @@ class ComTestCase(TestCase):
 	def setUp(self):
 		self.app = App()
 		self.app.start()
-		self.com = Com()
+		self.com = Com(configFile='../test/default.conf')
 
 		self.port = reactor.listenTCP(Com.myPort, pb.PBServerFactory(self.com), interface='127.0.0.1')
 		self.portnum = self.port.getHost().port
@@ -118,6 +118,7 @@ class ComTestCase(TestCase):
 
 	def test_regUnregApp(self):
 		self.client.connect(Com.myPort)
+		self.obj = None
 
 		def res(result):
 			self.assertTrue('success' in result['result'])
@@ -128,10 +129,17 @@ class ComTestCase(TestCase):
 			print reason
 			self.client.end()
 
-		def connected(obj):
-			obj.callRemote('cmd', {'cmd': 'reg_app', 'name':'hola','port':10666})
-			d = obj.callRemote('cmd', {'cmd': 'unreg_app', 'name':'hola'})
+		def registered(result):
+			self.assertTrue('success' in result['result'])
+			d = self.obj.callRemote('cmd', {'cmd': 'unreg_app', 'name':'hola'})
 			d.addCallbacks(res, nack)
+			return d
+
+		def connected(obj):
+			self.obj = obj
+			d = obj.callRemote('cmd', {'cmd': 'reg_app', 'name':'hola','port':10666})
+			
+			d.addCallbacks(registered, nack)
 			#d.addCallback(lambda result: obj.broker.transport.loseConnection())
 
 			return d
@@ -247,7 +255,7 @@ class ComTestCase(TestCase):
 	def test_read(self):
 		self.client.connect(Com.myPort)
 
-		message = {'msg':'hello','dest':1,'app':'hola'}
+		message = {'msg':'hello','msgId':1,'src':0,'dest':1,'app':'hola'}
 
 		def blah():
 			self.assertTrue(self.app.app.received)
@@ -276,7 +284,7 @@ class ComTestCase(TestCase):
 	def test_readNoApp(self):
 		self.client.connect(Com.myPort)
 
-		message = {'msg':'hello','dest':1}
+		message = {'msg':'hello','msgId':1,'src':0,'dest':1}
 
 		def blah():
 			self.assertTrue(self.app.app.received)
@@ -301,7 +309,131 @@ class ComTestCase(TestCase):
 		self.client.d.addCallback(connected)
 
 		return self.client.d
-		
+
+	def test_readBlacklist(self):
+		self.client.connect(Com.myPort)
+
+		self.com._commonData['blacklist'] = ['127.0.0.1']
+
+		message = {'msg':'hello','msgId':1,'src':0,'dest':1,'app':'hola'}
+
+		def blah():
+			self.assertTrue(not self.app.app.received)
+
+		def res(result):
+			self.assertTrue('success' in result['result'])
+			self.udpclient.write(message)
+			d = deferLater(reactor, .5, blah)
+			return d
+
+		def nack(reason):
+			print reason
+			self.client.end()
+
+		def connected(obj):
+			d = obj.callRemote('cmd', {'cmd': 'reg_app', 'name':'hola','port':10666})
+			d.addCallbacks(res, nack)
+			#d.addCallback(lambda result: obj.broker.transport.loseConnection())
+
+			return d
+
+		self.client.d.addCallback(connected)
+
+		return self.client.d
+
+	def test_readConsecutiveMsgId(self):
+		self.client.connect(Com.myPort)
+
+		message1 = {'msg':'hello','msgId':1,'src':0,'dest':1,'app':'hola'}
+		message2 = {'msg':'hello','msgId':2,'src':0,'dest':1,'app':'hola'}
+
+		def blah():
+			self.assertTrue(len(self.app.app.received) == 2)
+
+		def res(result):
+			self.assertTrue('success' in result['result'])
+			self.udpclient.write(message1)
+			self.udpclient.write(message2)
+			d = deferLater(reactor, .1, blah)
+			return d
+
+		def nack(reason):
+			print reason
+			self.client.end()
+
+		def connected(obj):
+			d = obj.callRemote('cmd', {'cmd': 'reg_app', 'name':'hola','port':10666})
+			d.addCallbacks(res, nack)
+			#d.addCallback(lambda result: obj.broker.transport.loseConnection())
+
+			return d
+
+		self.client.d.addCallback(connected)
+
+		return self.client.d
+
+	def test_readRepeatMsgId(self):
+		self.client.connect(Com.myPort)
+
+		message1 = {'msg':'hello','msgId':1,'src':0,'dest':1}
+		message2 = {'msg':'hello','msgId':1,'src':0,'dest':1}
+
+		def blah():
+			self.assertTrue(len(self.app.app.received) == 1)
+
+		def res(result):
+			self.assertTrue('success' in result['result'])
+			self.udpclient.write(message1)
+			self.udpclient.write(message2)
+			d = deferLater(reactor, .1, blah)
+			return d
+
+		def nack(reason):
+			print reason
+			self.client.end()
+
+		def connected(obj):
+			d = obj.callRemote('cmd', {'cmd': 'reg_app', 'name':'hola','port':10666})
+			d.addCallbacks(res, nack)
+			#d.addCallback(lambda result: obj.broker.transport.loseConnection())
+
+			return d
+
+		self.client.d.addCallback(connected)
+
+		return self.client.d
+
+	def test_readRepeatMsgIdDiffSrc(self):
+		self.client.connect(Com.myPort)
+
+		message1 = {'msg':'hello','msgId':1,'src':0,'dest':1}
+		message2 = {'msg':'hello','msgId':1,'src':2,'dest':1}
+
+		def blah():
+			self.assertTrue(len(self.app.app.received) == 2)
+
+		def res(result):
+			self.assertTrue('success' in result['result'])
+			self.udpclient.write(message1)
+			self.udpclient.write(message2)
+			d = deferLater(reactor, .1, blah)
+			return d
+
+		def nack(reason):
+			print reason
+			self.client.end()
+
+		def connected(obj):
+			d = obj.callRemote('cmd', {'cmd': 'reg_app', 'name':'hola','port':10666})
+			d.addCallbacks(res, nack)
+			#d.addCallback(lambda result: obj.broker.transport.loseConnection())
+
+			return d
+
+		self.client.d.addCallback(connected)
+
+		return self.client.d
+	
 
 	def test_writeBoth(self):
 		self.client.connect(Com.myPort)
