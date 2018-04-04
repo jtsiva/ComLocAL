@@ -5,15 +5,17 @@ from comlocal.core.Com import Com
 
 class ComIFace (object):
 
-	def __init__(self, name, port):
+	def __init__(self, name):
 		self.readCB = None
 		self._comiface = None
 		self.name = name
-		self.port = port
+		self.tcpPort = None
 
 	def start(self):
 		self._comiface = _ComIFace(self)
-		self.tcpPort = reactor.listenTCP(self.port, pb.PBServerFactory(self._comiface), interface='127.0.0.1')
+
+		#http://twistedmatrix.com/pipermail/twisted-python/2008-February/016886.html
+		self.tcpPort = reactor.listenTCP(0, pb.PBServerFactory(self._comiface), interface='127.0.0.1')
 		
 		d = self._comiface.unregister()
 		d.addCallback(lambda res: self._comiface.register())
@@ -28,7 +30,7 @@ class ComIFace (object):
 
 
 	def write(self, msg, dest):
-		message = {'msg':msg,'dest':dest}
+		message = {'msg':msg,'dest':dest,'app':self.name}
 		return self._comiface.doWrite(message)
 		
 
@@ -42,7 +44,6 @@ class ComIFace (object):
 class _ComIFace(pb.Root):
 	def __init__(self, iface):
 		self.iface = iface
-		self.port = self.iface.port
 		self.obj = None
 
 	def register(self):
@@ -55,7 +56,7 @@ class _ComIFace(pb.Root):
 
 		def connected(obj):
 			self.obj = obj
-			regPacket = {'cmd': 'reg_app', 'name':self.iface.name,'port':self.port}
+			regPacket = {'cmd': 'reg_app', 'name':self.iface.name,'port':self.iface.tcpPort.port}
 			d = obj.callRemote('cmd', regPacket)
 			d.addCallbacks(regAck,failed)
 			#d.addCallbacks(lambda result: obj.broker.transport.loseConnection(), failed)
@@ -81,7 +82,7 @@ class _ComIFace(pb.Root):
 
 		def connected(obj):
 			self.obj = obj
-			regPacket = {'cmd': 'unreg_app', 'name':self.iface.name,'port':self.iface.port}
+			regPacket = {'cmd': 'unreg_app', 'name':self.iface.name,'port':self.iface.tcpPort.port}
 			d = obj.callRemote('cmd', regPacket)
 			d.addCallbacks(regAck,failed)
 			#d.addCallbacks(lambda result: obj.broker.transport.loseConnection(), failed)
