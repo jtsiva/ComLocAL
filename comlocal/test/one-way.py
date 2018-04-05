@@ -65,7 +65,7 @@ def main():
 
 	thing = myThing()
 
-	myCom = ComIFace.ComIFace('TEST',10789)
+	myCom = ComIFace.ComIFace('TEST')
 	myCom.readCB = thing.reader
 	
 	count = int(args.count) if args.count is not None else None

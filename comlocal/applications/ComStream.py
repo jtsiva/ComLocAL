@@ -37,16 +37,25 @@ def main():
 		d = myCom.write(data, dest)
 		return d
 
+	def stop(reason):
+		if ioThing.empty:
+			d = myCom.stop()
+			d.addCallback(lambda _: reactor.stop())
+		else:
+			reactor.callLater(.001, stop, reason)
+
 	ioThing.writeHandler = writeData
+	ioThing.stopHandler = stop
 	myCom.readCB = ioThing.readHandler
 	ioThing.setRawMode()
-	stdio.StandardIO(ioThing)
+	
 
 	if not listener:
 		if dest is None:
 			print ("No destination specified!")
 			exit()
-		myCom.start()
+		d = myCom.start()
+		d.addCallback (lambda _: stdio.StandardIO(ioThing))
 	else:
 		def check():
 			if ioThing.last == ioThing.read:
@@ -57,6 +66,7 @@ def main():
 				reactor.callLater(timeout, check)
 
 		d = myCom.start()
+		d.addCallback (lambda _: stdio.StandardIO(ioThing))
 		if timeout != 0:
 			d.addCallbacks(lambda _: reactor.callLater(timeout, check), failed)
 

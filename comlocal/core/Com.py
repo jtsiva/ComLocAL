@@ -67,6 +67,7 @@ class Com(pb.Root, NetworkLayer):
 
 					def connected(obj):
 						self._registeredApplications[cmd['name'][:4]]['obj'] = obj
+						log.msg(cmd)
 						return cmd
 
 					factory = pb.PBClientFactory()
@@ -77,7 +78,6 @@ class Com(pb.Root, NetworkLayer):
 					cmd['result'] = self.success('')
 
 					return d
-
 
 			elif 'unreg_app' == cmd['cmd']:
 				if cmd['name'] not in self._registeredApplications:

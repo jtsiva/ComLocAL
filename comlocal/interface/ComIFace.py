@@ -14,16 +14,16 @@ class ComIFace (object):
 		self.readCB = None
 		self._comiface = None
 		self.name = name
+		self.port = None
 		self.tcpPort = None
 		self.registered = False
 
 	def start(self):
-		print 'starting'
 		self._comiface = _ComIFace(self)
 
 		#http://twistedmatrix.com/pipermail/twisted-python/2008-February/016886.html
 		self.tcpPort = reactor.listenTCP(0, pb.PBServerFactory(self._comiface), interface='127.0.0.1')
-		print self.tcpPort.getHost().port
+		self.port = self.tcpPort.getHost().port
 		d = self._comiface.unregister()
 		d.addCallback(lambda res: self._comiface.register())
 		return d
@@ -55,7 +55,6 @@ class _ComIFace(pb.Root):
 
 	def register(self):
 		def regAck(result):
-			print result
 			assert 'success' in result['result']
 			self.iface.registered = True
 
@@ -66,10 +65,9 @@ class _ComIFace(pb.Root):
 
 		def connected(obj):
 			self.obj = obj
-			regPacket = {'cmd': 'reg_app', 'name':self.iface.name,'port':self.iface.tcpPort.getHost().port}
+			regPacket = {'cmd': 'reg_app', 'name':self.iface.name,'port':self.iface.port}
 			d = obj.callRemote('cmd', regPacket)
 			d.addCallbacks(regAck,failed)
-			#d.addCallbacks(lambda result: obj.broker.transport.loseConnection(), failed)
 			return d
 
 		if self.obj is None:
@@ -84,31 +82,20 @@ class _ComIFace(pb.Root):
 
 	def unregister(self):
 		def regAck(result):
-			print result
 			#assert 'success' in result['result']
 			self.iface.registered = False
 
 		def failed(reason):
-			print 'unreg'
-			print reason
 			r = reason.trap(error.ConnectionRefusedError)
-			print r
-			if r == error.ConnectionRefusedError:
-				print "Can't connect to Com. Have you started it?"
-			#ignoring connection lost because I don't see at the moment why it matters
-			print 'hit here'
+			print "Can't connect to Com. Have you started it?"
+			
 
 		def connected(obj):
-			print 'connected'
 			self.obj = obj
-			regPacket = {'cmd': 'unreg_app', 'name':self.iface.name,'port':self.iface.tcpPort.getHost().port}
+			regPacket = {'cmd': 'unreg_app', 'name':self.iface.name,'port':self.iface.port}
 			
-			print regPacket
-			print self.iface.name[:4]
-			print obj
 			d = obj.callRemote('cmd', regPacket)
 			d.addCallbacks(regAck,failed)
-			#d.addCallbacks(lambda result: obj.broker.transport.loseConnection(), failed)
 			return d
 
 		if self.obj is None:
@@ -123,22 +110,18 @@ class _ComIFace(pb.Root):
 
 
 	def doWrite(self, msg):
+
 		def writeAck(result):
 			return result
 
 		def failed(reason):
-			print 'write'
 			print reason
 
 		def connected(obj):
 			self.obj = obj
-			# def closeAndReturn (result):
-			# 	obj.broker.transport.loseConnection()
-			# 	return result
 
 			d = obj.callRemote('write', msg)
 			d.addCallbacks(writeAck, failed)
-			#d.addCallbacks(closeAndReturn, failed)
 
 			return d
 
@@ -157,7 +140,6 @@ class _ComIFace(pb.Root):
 
 	def doCmd(self,cmd):
 		def writeAck(result):
-			#print self.success(str(result))
 			return result
 
 		def failed(reason):
@@ -167,7 +149,6 @@ class _ComIFace(pb.Root):
 		def connected(obj):
 			self.obj = obj
 			def closeAndReturn (result):
-				#obj.broker.transport.loseConnection()
 				return result
 
 			d = obj.callRemote('cmd', cmd)
