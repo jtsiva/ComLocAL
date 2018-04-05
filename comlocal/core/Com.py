@@ -17,13 +17,13 @@ class Com(pb.Root, NetworkLayer):
 	broadcastSinkID = -1
 	myPort = 10257
 
-	def __init__(self, log = False, configFile = None, authFile = None):
+	def __init__(self, useLog = False, configFile = None, authFile = None):
 		NetworkLayer.__init__(self, 'Com')
 		self._authFile = authFile
 		self._registeredApplications = {}
 
 		self._commonData = {}
-		self._initCommonData(log, configFile)
+		self._initCommonData(useLog, configFile)
 
 		self._CL = ConnectionLayer.ConnectionLayer(self._commonData)
 		self._RL = RoutingLayer.RoutingLayer(self._commonData)
@@ -43,7 +43,7 @@ class Com(pb.Root, NetworkLayer):
 
 		self._ML.setReadCB(self._read)
 		self._ML.setWriteCB(self._RL.write)
-	
+
 	#
 
 	def stop(self):
@@ -54,6 +54,7 @@ class Com(pb.Root, NetworkLayer):
 				self._registeredApplications[key]['obj'] = None
 
 	def remote_cmd(self, cmd):
+		log.msg(cmd)
 		try:
 			if 'reg_app' == cmd['cmd']:
 				#only use 4 char for name (just in case they sent more)
