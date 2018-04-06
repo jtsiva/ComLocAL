@@ -19,10 +19,13 @@ def main():
 	parser.add_argument ("-t", "--timeout", required = False, default="0", help="time to wait before connection is closed")
 	parser.add_argument ("-s", "--stats", action="store_true", default=False, help="set whether statistics will be printed once the program finishes")
 	parser.add_argument ("-d", "--dest", required = False, help="set the destination for the message")
+	parser.add_argument ("-c", "--chunksize", required = False, default="512", help="set the max size of the chunks (in bytes) into which the input is broken")
+
+
 
 	args =  parser.parse_args()
 
-	ioThing = IOHandler.IOHandler()
+	ioThing = IOHandler.IOHandler(int(args.chunksize))
 
 	myCom = ComIFace.ComIFace(args.name)
 	
@@ -58,7 +61,7 @@ def main():
 		d.addCallback (lambda _: stdio.StandardIO(ioThing))
 	else:
 		def check():
-			if ioThing.last == ioThing.read:
+			if ioThing.last == ioThing.reads:
 				d = myCom.stop()
 				d.addCallbacks(lambda _: reactor.stop(), failed)
 			else:

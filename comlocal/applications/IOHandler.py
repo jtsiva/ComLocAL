@@ -8,9 +8,9 @@ import json
 
 
 class IOHandler(basic.LineReceiver):
-	def __init__(self):
+	def __init__(self, frame_size):
 		self.__buffer = ""
-		self.frame_size = 512 #FRAME SIZE HERE
+		self.frame_size = frame_size #FRAME SIZE HERE
 		self.writeHandler = None
 		self.bytesReceived = 0
 		self.bytesSent = 0
@@ -92,3 +92,4 @@ class IOHandler(basic.LineReceiver):
 
 		if self.bytesReceived:
 			print('Received %d bytes in %f seconds' % (self.bytesReceived, self.lastTime - self.start))
+			print('%d reads' % self.reads)
