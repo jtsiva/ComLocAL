@@ -52,15 +52,26 @@ class RadioManager (NetworkLayer):
 		return cmd
 
 	def write(self, message):
-		try:
-			#message['sentby'] = self.props['addr']
-			addr = message.pop('addr')
-			self.transport.write(message, addr)
-			message['result'] = self.success('')
-		except KeyError:
-			message['result'] = self.failure('missing "addr" field')
-		except Exception as e:
-			message['result'] = self.failure(str(e))
+		retry = True
+
+		while retry:
+			try:
+				#message['sentby'] = self.props['addr']
+				addr = message.pop('addr')
+				self.transport.write(message, addr)
+				message['result'] = self.success('')
+				retry = False
+			except KeyError:
+				message['result'] = self.failure('missing "addr" field')
+				retry = False
+			except Exception as e:
+				if 'Errno 11' not in str(e):
+					message['result'] = self.failure(str(e))
+					retry = False
+				else:
+					message['addr'] = addr
+				# 	log.msg(self.failure(str(e)))
+		#
 	
 		return message
 

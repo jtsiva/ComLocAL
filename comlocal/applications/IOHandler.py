@@ -6,6 +6,9 @@ from twisted.internet import reactor
 import time
 import json
 
+#debug
+import sys
+
 
 class IOHandler(basic.LineReceiver):
 	def __init__(self, frame_size):
@@ -69,10 +72,19 @@ class IOHandler(basic.LineReceiver):
 
 		self.lastTime = now
 
-		self.bytesSent += len(data)
-		self.writes += 1
+		def countWrite(result):
+			if 'failure' not in result['result']:
+				self.writes += 1
+				self.bytesSent += len(data)
+			else:
+				print ("failure:" + str(result), file=sys.stderr)
+
+		def badWrite(reason):
+			print(reason, file=sys.stderr)
 		
-		return self.writeHandler(data)
+		d = self.writeHandler(data)
+		d.addCallbacks(countWrite, badWrite)
+		return d
 
 			
 	def readHandler(self, data):

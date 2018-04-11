@@ -68,7 +68,7 @@ class WiFiTransport (DatagramProtocol, RadioTransport):
 			self.datagramReceived(json.dumps(message), ('<loopback>', WiFiTransport.myPort))
 
 	def datagramReceived(self, data, (host, port)):
-		log.msg(data + " from %s %d" % (host, port))
+		#log.msg(data + " from %s %d" % (host, port))
 		#print data + " from %s %d" % (host, port)
 		#don't do anything if not set up or if manager has already
 		#been gc'd
