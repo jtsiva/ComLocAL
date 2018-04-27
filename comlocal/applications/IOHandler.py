@@ -76,7 +76,7 @@ class IOHandler(basic.LineReceiver):
 			if result is not None and 'failure' not in result['result']:
 				self.writes += 1
 				self.bytesSent += len(data)
-			else:
+			else if result is not None:
 				print ("failure:" + str(result), file=sys.stderr)
 
 		def badWrite(reason):
