@@ -73,7 +73,7 @@ class IOHandler(basic.LineReceiver):
 		self.lastTime = now
 
 		def countWrite(result):
-			if 'failure' not in result['result']:
+			if result is not None and 'failure' not in result['result']:
 				self.writes += 1
 				self.bytesSent += len(data)
 			else:
@@ -95,7 +95,7 @@ class IOHandler(basic.LineReceiver):
 
 		self.reads += 1
 		self.lastTime = now
-		print(data['msg'])
+		print(data['msg'], end='')
 
 	def printStats(self):
 		if self.bytesSent:
