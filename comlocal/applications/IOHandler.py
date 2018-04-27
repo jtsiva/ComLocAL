@@ -6,6 +6,9 @@ from twisted.internet import reactor
 import time
 import json
 
+from io import BytesIO
+import base64
+
 #debug
 import sys
 
@@ -82,7 +85,7 @@ class IOHandler(basic.LineReceiver):
 		def badWrite(reason):
 			print(reason, file=sys.stderr)
 		
-		d = self.writeHandler(data)
+		d = self.writeHandler(data.encode('base64'))
 		d.addCallbacks(countWrite, badWrite)
 		return d
 
@@ -95,7 +98,7 @@ class IOHandler(basic.LineReceiver):
 
 		self.reads += 1
 		self.lastTime = now
-		print(data['msg'], end='')
+		print(base64.b64decode(data['msg']), end='')
 
 	def printStats(self):
 		if self.bytesSent:
