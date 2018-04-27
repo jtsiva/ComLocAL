@@ -98,7 +98,8 @@ class IOHandler(basic.LineReceiver):
 
 		self.reads += 1
 		self.lastTime = now
-		print(base64.b64decode(data['msg']), end='')
+		self.transport.write(base64.b64decode(data['msg']))
+		#print(base64.b64decode(data['msg']), end='')
 
 	def printStats(self):
 		if self.bytesSent:
