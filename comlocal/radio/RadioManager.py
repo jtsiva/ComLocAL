@@ -1,5 +1,7 @@
 from twisted.python import log
+from twisted.internet.task import LoopingCall
 from comlocal.util.NetworkLayer import NetworkLayer
+import Queue
 import time
 
 
@@ -13,6 +15,9 @@ class RadioManager (NetworkLayer):
 		self.readCB = None
 		self.transport = None
 		self.connections = {}
+		self.sendQ = Queue.PriorityQueue()
+		self.writeTask = LoopingCall(self._dequeueAndSend)
+		self.writeTask.start(0.05) #flow control!
 
 	def _setupProperties(self):
 		"""
@@ -51,27 +56,27 @@ class RadioManager (NetworkLayer):
 
 		return cmd
 
-	def write(self, message):
-		retry = True
+	def _dequeueAndSend(self):
+		try:
+			(priority, message) = self.sendQ.get()
 
-		while retry:
-			try:
-				#message['sentby'] = self.props['addr']
-				addr = message.pop('addr')
-				self.transport.write(message, addr)
-				message['result'] = self.success('')
-				retry = False
-			except KeyError:
-				message['result'] = self.failure('missing "addr" field')
-				retry = False
-			except Exception as e:
-				if 'Errno 11' not in str(e):
-					message['result'] = self.failure(str(e))
-					retry = False
-				else:
-					message['addr'] = addr
-				# 	log.msg(self.failure(str(e)))
-		#
+			addr = message.pop('addr')
+			self.transport.write(message, addr)
+
+		except Queue.Empty:
+			pass #don't care
+		except Exception as e:
+			if 'Errno 11' in str(e):
+				message['addr'] = addr
+				self.sendQ.put((priority - 1, message))
+
+	def write(self, message):
+
+		if 'addr' in message:
+			self.sendQ.put((10,message))
+			message['result'] = self.success('')
+		else:
+			message['result'] = self.failure('missing "addr" field')
 	
 		return message
 
