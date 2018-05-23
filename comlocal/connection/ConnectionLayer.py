@@ -10,7 +10,6 @@ class RadioBuilder:
 		manager = getattr(module, name+'Manager')
 		transport = getattr(module, name + 'Transport')
 		start = getattr(module, 'startTransport')
-
 		mgr = manager()
 		trans = transport()
 		mgr.setTransport(trans)
@@ -68,8 +67,7 @@ class ConnectionLayer(NetworkLayer):
 				raise ValueError("duplicate radio name '{0}' found".format(name))
 		except ImportError as e:
 			#invalid name
-			#print 'invalid name ' + str(e)
-			pass
+			print 'invalid name ' + str(e)
 
 	def cleanupRadios(self):
 		for rad in self.radios:
@@ -172,7 +170,6 @@ class ConnectionLayer(NetworkLayer):
 		"""
 		
 		try:
-
 			if 'cmd' in msg:
 				return self.cmd(msg)
 				

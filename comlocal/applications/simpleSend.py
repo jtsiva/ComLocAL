@@ -15,14 +15,15 @@ import argparse
 from twisted.python import log
 
 class container(object):
-	def __init__(self, configFile):
+	def __init__(self, configFile, readHandler):
 		self._commonData = {}
 		self._initCommonData(configFile)
 		self._CL = ConnectionLayer.ConnectionLayer(self._commonData)
+		self._CL.setReadCB(readHandler)
 		self.radioBcast = {}
 
 		for radioName in self._commonData['startRadios']:
-				self._setupRadio(radioName)
+			self._setupRadio(radioName)
 
 	def _initCommonData(self, configFile):
 		"""
@@ -49,8 +50,6 @@ class container(object):
 
 def main():
 
-	
-
 	parser = argparse.ArgumentParser()
 	parser.add_argument ("-f", "--config", required = False, help="configuration file")
 	parser.add_argument ("-n", "--name", required = True, help="set the name of application (for both sending and receiving)")
@@ -68,9 +67,12 @@ def main():
 	timeout = float(args.timeout)
 	dest = int(args.dest) if args.dest is not None else None
 
-	myContainer = container(args.config)
+	myContainer = container(args.config, ioThing.readHandler)
 
 	message = {'msgId':msgID,'src':myContainer._commonData['id'],'dest':dest,'app':args.name}
+	radioList = []
+	for radio in myContainer._commonData['startRadios']:
+		radioList.append((radio, myContainer.radioBcast[radio]))
 
 	def failed(reason):
 		print(reason)
@@ -79,7 +81,11 @@ def main():
 		global msgID
 		message['msgId'] = msgID
 		message['msg'] = data
-		message['radios'] = [('WiFi',myContainer.radioBcast['WiFi'])]
+
+		
+
+		message['radios'] = radioList
+		
 		try:
 			tmp = message.pop('result')
 		except KeyError:

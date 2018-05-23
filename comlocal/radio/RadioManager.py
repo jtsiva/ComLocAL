@@ -1,5 +1,6 @@
 from twisted.python import log
 from twisted.internet.task import LoopingCall
+
 from comlocal.util.NetworkLayer import NetworkLayer
 import Queue
 import time
@@ -17,7 +18,8 @@ class RadioManager (NetworkLayer):
 		self.connections = {}
 		self.sendQ = Queue.PriorityQueue()
 		self.writeTask = LoopingCall(self._dequeueAndSend)
-		self.writeTask.start(0.05) #flow control!
+		self.running = False
+		
 
 	def _setupProperties(self):
 		"""
@@ -58,7 +60,7 @@ class RadioManager (NetworkLayer):
 
 	def _dequeueAndSend(self):
 		try:
-			(priority, message) = self.sendQ.get()
+			priority, message = self.sendQ.get()
 
 			addr = message.pop('addr')
 			self.transport.write(message, addr)
@@ -69,6 +71,8 @@ class RadioManager (NetworkLayer):
 			if 'Errno 11' in str(e):
 				message['addr'] = addr
 				self.sendQ.put((priority - 1, message))
+			else:
+				log.msg("WTF?")
 
 	def write(self, message):
 
@@ -77,6 +81,10 @@ class RadioManager (NetworkLayer):
 			message['result'] = self.success('')
 		else:
 			message['result'] = self.failure('missing "addr" field')
+
+		if not self.running:
+			self.running = True
+			self.writeTask.start(1, now=True) #flow control!
 	
 		return message
 
