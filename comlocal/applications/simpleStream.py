@@ -12,6 +12,7 @@ from twisted.internet.defer import Deferred, maybeDeferred
 
 import json
 import argparse
+import random
 
 import sys
 
@@ -62,6 +63,7 @@ class container(object):
 def main():
 
 	parser = argparse.ArgumentParser()
+	parser.add_argument ("-l", "--listener", action="store_true", default=False, help="set whether this device will listen")
 	parser.add_argument ("-f", "--config", required = False, help="configuration file")
 	parser.add_argument ("-n", "--name", required = True, help="set the name of application (for both sending and receiving)")
 	parser.add_argument ("-t", "--timeout", required = False, default="0", help="time to wait before connection is closed")
@@ -72,6 +74,8 @@ def main():
 	global msgID
 	msgID = 0
 	args =  parser.parse_args()
+
+	listener = args.listener
 
 	ioThing = IOHandler.IOHandler(int(args.chunksize))
 	
@@ -117,9 +121,22 @@ def main():
 	ioThing.setRawMode()
 	
 
-	if dest is None:
-		print ("No destination specified!")
-		exit()
+	if not listener:
+		if dest is None:
+			print ("No destination specified!")
+			exit()
+	else:
+		def check():
+			if ioThing.last == ioThing.reads:
+				reactor.stop()
+			else:
+				ioThing.last = ioThing.reads
+				reactor.callLater(timeout, check)
+
+		if timeout != 0:
+			reactor.callLater(timeout, check)
+
+
 	stdio.StandardIO(ioThing)
 	
 	reactor.run()
