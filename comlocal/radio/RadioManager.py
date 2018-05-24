@@ -19,6 +19,7 @@ class RadioManager (NetworkLayer):
 		self.sendQ = Queue.PriorityQueue()
 		self.writeTask = LoopingCall(self._dequeueAndSend)
 		self.running = False
+		self.txPacketRate = 20.0
 		
 
 	def _setupProperties(self):
@@ -37,11 +38,16 @@ class RadioManager (NetworkLayer):
 		"""
 		return {}
 
+	def setProperty(self, props):
+		#iterate over props
+		if 'txPacketRate' in props:
+			self.txPacketRate = props['txPacketRate']
+
 	def setTransport(self, transport):
 		self.transport = transport
 
 	def _getStatus(self):
-		return {'running':True}
+		return {'running':True, 'buffering':(not self.sendQ.empty())}
 
 	def cmd(self, cmd):
 		#log.msg('received command: %s' % cmd)
@@ -60,7 +66,8 @@ class RadioManager (NetworkLayer):
 
 	def _dequeueAndSend(self):
 		try:
-			priority, message = self.sendQ.get()
+			priority, message = self.sendQ.get(False)
+			#print 'dequeuing and writing: ' + str(priority) + "---" + str(message)
 
 			addr = message.pop('addr')
 			self.transport.write(message, addr)
@@ -77,14 +84,14 @@ class RadioManager (NetworkLayer):
 	def write(self, message):
 
 		if 'addr' in message:
-			self.sendQ.put((10,message))
+			self.sendQ.put((10,message.copy()))
 			message['result'] = self.success('')
 		else:
 			message['result'] = self.failure('missing "addr" field')
 
 		if not self.running:
 			self.running = True
-			self.writeTask.start(1, now=True) #flow control!
+			self.writeTask.start(1/self.txPacketRate, now=True) #flow control!
 	
 		return message
 

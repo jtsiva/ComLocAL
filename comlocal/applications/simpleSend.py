@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+from __future__ import print_function
 from comlocal.connection import ConnectionLayer
 from twisted.python import log
 
@@ -11,6 +12,8 @@ from twisted.internet.defer import Deferred, maybeDeferred
 
 import json
 import argparse
+
+import sys
 
 from twisted.python import log
 
@@ -46,6 +49,14 @@ class container(object):
 		self._CL.addRadio(radioName)
 		bcastAddr = self._CL.write({'cmd':'get_radio_props', 'name':radioName})['result']['bcastAddr']
 		self.radioBcast[radioName] = bcastAddr
+
+	def radioBuffersEmpty(self):
+		empty = True
+		status = self._CL.write({'cmd':'check_radios'})
+		for radioStatus in status['result']:
+			if radioStatus['buffering']:
+				empty = False
+		return empty
 
 
 def main():
@@ -96,7 +107,7 @@ def main():
 
 
 	def stop(reason):
-		if ioThing.empty:
+		if ioThing.empty and myContainer.radioBuffersEmpty():
 			reactor.stop()
 		else:
 			reactor.callLater(.001, stop, reason)
@@ -114,6 +125,9 @@ def main():
 	reactor.run()
 
 	if args.stats:
+		# for radio in myContainer._CL.radios:
+		# 	print ("", file=sys.stderr)
+		# 	print (radio.name + ": " + str(radio._mgr.sendQ.qsize()), file=sys.stderr)
 		ioThing.printStats()
 #
 

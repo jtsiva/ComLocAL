@@ -17,7 +17,7 @@ class RadioBuilder:
 
 		port = start(trans)
 
-		return type('Radio', (object,),{'name':name,'write':mgr.write, '_mgr':mgr,'_trans':trans,'port':port})
+		return type('Radio', (object,),{'name':name,'write':mgr.write, 'setProperty':mgr.setProperty, '_mgr':mgr,'_trans':trans,'port':port})
 
 
 class ConnectionLayer(NetworkLayer):
@@ -62,6 +62,9 @@ class ConnectionLayer(NetworkLayer):
 			if name not in self.getRadioNames():
 				rad = RadioBuilder().build(name)
 				rad._mgr.setReadCB(self.read)
+				if name + 'Props' in self._commonData:
+					rad.setProperty(self._commonData[name + 'Props'])
+
 				self.radios.append(rad)
 			else:
 				raise ValueError("duplicate radio name '{0}' found".format(name))
@@ -120,6 +123,8 @@ class ConnectionLayer(NetworkLayer):
 			self._commonData['logging']['connection']['received'] += 1
 		
 		#
+
+		#print 'hit CL'
 
 		#drop if address is blacklisted
 		try:

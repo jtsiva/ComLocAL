@@ -19,9 +19,12 @@ class LoopbackManager (RadioManager):
 
 class LoopbackTransport(RadioTransport):
 	def write(self, message, addr):
+		#print 'hit Loopback'
 		self.read(json.dumps(message))
 
 	def read(self, data):
+		#print 'hit Loopback'
+
 		if self.manager is not None:
 			message = json.loads(data)
 			message['sentby'] = self.manager.props['addr']

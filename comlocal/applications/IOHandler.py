@@ -91,20 +91,22 @@ class IOHandler(basic.LineReceiver):
 
 			
 	def readHandler(self, data):
+		#print('hit IOHandler')
 		now = time.time()
-		self.bytesReceived += len(data['msg'])
+		message = base64.b64decode(data['msg'])
+		self.bytesReceived += len(message)
 		if 0 == self.reads:
 			self.start = now
 
 		self.reads += 1
 		self.lastTime = now
-		print (base64.b64decode(data['msg']), end='')
+		print (message, end='')
 
 	def printStats(self):
 		if self.bytesSent:
-			print('Sent %d bytes in %f seconds' % (self.bytesSent, self.lastTime - self.start))
-			print('%d writes' % self.writes)
+			print('Sent %d bytes in %f seconds' % (self.bytesSent, self.lastTime - self.start), file=sys.stderr)
+			print('%d writes' % self.writes, file=sys.stderr)
 
 		if self.bytesReceived:
-			print('Received %d bytes in %f seconds' % (self.bytesReceived, self.lastTime - self.start))
-			print('%d reads' % self.reads)
+			print('Received %d bytes in %f seconds' % (self.bytesReceived, self.lastTime - self.start), file=sys.stderr)
+			print('%d reads' % self.reads, file=sys.stderr)
