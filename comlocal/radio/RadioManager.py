@@ -41,7 +41,7 @@ class RadioManager (NetworkLayer):
 	def setProperty(self, props):
 		#iterate over props
 		if 'txPacketRate' in props:
-			self.txPacketRate = props['txPacketRate']
+			self.txPacketRate = float(props['txPacketRate'])
 
 	def setTransport(self, transport):
 		self.transport = transport
