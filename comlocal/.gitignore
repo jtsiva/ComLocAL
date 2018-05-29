@@ -5,3 +5,4 @@
 *.coverage
 *_trial_marker
 *.lock
+*.conf
